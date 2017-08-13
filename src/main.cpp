@@ -4,7 +4,8 @@
 
 inline void setup_routing(crow::SimpleApp &app) {
     CROW_ROUTE(app, "/")([]{
-        return "Hello, world!";
+        //return "Hello, world!";
+        return crow::response(404);
     });
 }
 
@@ -12,5 +13,5 @@ inline void setup_routing(crow::SimpleApp &app) {
 int main() {
     crow::SimpleApp app;
     setup_routing(app);
-    app.port(8080).run();
+    app.port(80).run();
 }
