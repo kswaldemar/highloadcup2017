@@ -9,17 +9,13 @@ RUN apt-get update \
     libboost-system1.55-dev \
     libboost-thread1.55-dev
 
-ADD 3rdparty 3rdparty
-ADD src src
-ADD CMakeLists.txt CMakeLists.txt
+VOLUME /tmp
 
-RUN mkdir -p build && cd build \
-    && cmake -DCMAKE_BUILD_TYPE=Release .. \
-    && make
+ADD build-release/web-server web-server
 
 EXPOSE 80
 
-CMD ./build/web-server
+ENTRYPOINT [ "sh", "-c", "./web-server" ]
 
 
 

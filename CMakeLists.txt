@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 project(web-server)
 
 add_compile_options(
-    -std=c++14
+    -std=c++14 -Wall -Wextra
 )
 
 find_package(Boost 1.52 COMPONENTS system thread REQUIRED)
