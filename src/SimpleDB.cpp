@@ -35,20 +35,22 @@ pod::DATA_TYPE type_by_filename(const std::string &filename) {
 
 SimpleDB SimpleDB::from_json_folder(const std::string &folder) {
     SimpleDB ret;
-
-    fs::path path(folder);
     json data;
-    for (fs::directory_iterator it(path), end; it != end; ++it) {
-        const auto filename = it->path().filename().string();
+    LOG_INFO("Starting parsing json from folder %", folder);
+    for (const auto &p : fs::directory_iterator(folder)) {
+        const auto filename = p.path().filename().string();
         const auto type = type_by_filename(filename);
         if (type == pod::DATA_TYPE::None) {
             LOG_ERROR("invalid json name %", filename);
             continue;
         }
-        std::ifstream in(it->path().string());
+        const std::string file_str = p.path().string();
+        std::ifstream in(file_str);
         if (!in.is_open()) {
-            LOG_ERROR("Cannot open file %", it->path().string());
+            LOG_ERROR("Cannot open file %", file_str);
             continue;
+        } else {
+            LOG_INFO("Parse file %", filename);
         }
         in >> data;
         if (type == pod::DATA_TYPE::User) {
@@ -87,7 +89,7 @@ bool SimpleDB::visit_exists(id_t id) {
     return visits_.find(id) != visits_.end();
 }
 
-std::string SimpleDB::user_json(id_t id){
+std::string SimpleDB::user_json(id_t id) {
     return nlohmann::json(users_[id]).dump();
 }
 
