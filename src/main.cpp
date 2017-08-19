@@ -32,34 +32,45 @@ public:
         static const char *st_400 = "400 You are wrong";
 
         LOG_INFO("Request %, Method %", req->uri, req->method);
-
         try {
             auto params = split_params(req->uri);
             ReqType rt = match_action(req->method, req->uri);
             if (rt.act == ActionType::NONE) {
                 LOG_DEBUG("Looks like nothing for me");
-                ws_statusline(req, st_404);
+                send_reply(req, st_404);
             } else if (rt.act == ActionType::ENT_GET) {
                 LOG_DEBUG("Ok, parsed: entity type = %, id = %", static_cast<uint16_t>(rt.ent_type), rt.ent_id);
                 if (!db_.is_entity_exists(rt.ent_type, rt.ent_id)) {
-                    ws_statusline(req, st_404);
+                    LOG_DEBUG("Does not exists")
+                    send_reply(req, st_404);
                 } else {
-                    const std::string json = db_.get_entity(rt.ent_type, rt.ent_id);
-                    ws_statusline(req, st_200);
-                    ws_reply_data(req, json.c_str(), json.size());
+                    msg_ = db_.get_entity(rt.ent_type, rt.ent_id);
+                    LOG_DEBUG("Got json % with size %", msg_, msg_.size())
+                    send_reply(req, st_200, msg_.c_str());
                 }
             } else {
-                ws_statusline(req, "501 Not implemented");
+                send_reply(req, "501 Not implemented");
             }
         } catch (...) {
-            ws_statusline(req, st_400);
-            ws_reply_data(req, "{}\n", 3);
+            send_reply(req, st_400, "{}");
         }
 
         return WS_REPLY_FINISHED;
     }
 
 private:
+    static void send_reply(ws_request_t *req, const char *status_line, const char *data) {
+        ws_statusline(req, status_line);
+        ws_add_header(req, "Content-Type", "application/json; charset=utf-8");
+        ws_reply_data(req, data, strlen(data));
+    }
+
+    static void send_reply(ws_request_t *req, const char *status_line) {
+        ws_statusline(req, status_line);
+        ws_reply_data(req, "", 0);
+    }
+
+
     ReqType match_action(std::string method, char *uri) {
         ReqType ret;
         ret.act = ActionType::NONE;
@@ -123,6 +134,7 @@ private:
         return {};
     }
 
+    std::string msg_;
     SimpleDB db_ = SimpleDB::from_json_folder(JSON_FOLDER);
 };
 
@@ -136,5 +148,6 @@ int reply(ws_request_t *req) {
 int main() {
     ws_server_t serv;
     ws_quickstart(&serv, "127.0.0.1", PORT, reply);
+    LOG_INFO("Starting webserver on port %", PORT);
     ev_loop(ev_default_loop(0), 0);
 }

@@ -70,7 +70,7 @@ SimpleDB SimpleDB::from_json_folder(const std::string &folder) {
             }
         }
     }
-
+    LOG_INFO("Json parsing done");
     return ret;
 }
 
