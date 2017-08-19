@@ -1,3 +1,6 @@
 [submodule "crow"]
 	path = 3rdparty/crow
 	url = https://github.com/ipkn/crow.git
+[submodule "website"]
+	path = 3rdparty/website
+	url = https://github.com/kswaldemar/libwebsite.git
