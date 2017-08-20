@@ -4,16 +4,22 @@ extern "C" {
 #include <website.h>
 }
 
+#include <json.hpp>
+
+using nlohmann::json;
+
 namespace {
 
 void send_reply(ws_request_t *req, const char *status_line, const char *data) {
     ws_statusline(req, status_line);
     ws_add_header(req, "Content-Type", "application/json; charset=utf-8");
+    ws_add_header(req, "Server", "hlcup-1.0");
     ws_reply_data(req, data, strlen(data));
 }
 
 void send_reply(ws_request_t *req, const char *status_line) {
     ws_statusline(req, status_line);
+    ws_add_header(req, "Server", "hlcup-1.0");
     ws_reply_data(req, "", 0);
 }
 
@@ -21,8 +27,8 @@ void send_reply(ws_request_t *req, const char *status_line) {
 
 WebServer::WebServer(const std::string root_dir)
     : db_(SimpleDB::from_json_folder(root_dir))
-{
-}
+{ }
+
 
 int WebServer::reply(ws_request_t *req) {
     static const char *st_404 = "404 Not found";
@@ -30,33 +36,47 @@ int WebServer::reply(ws_request_t *req) {
     static const char *st_400 = "400 You are wrong";
 
     LOG_INFO("Request %, Method %", req->uri, req->method);
-    try {
-        auto params = split_params(req->uri);
-        ReqType rt = match_action(req->method, req->uri);
-        if (rt.act == ActionType::NONE) {
-            LOG_DEBUG("Looks like nothing for me");
+    auto params = split_params(req->uri);
+    ReqType rt = match_action(req->method, req->uri);
+    if (rt.act == ActionType::NONE) {
+        LOG_DEBUG("Looks like nothing for me");
+        send_reply(req, st_404);
+    } else if (rt.act == ActionType::ENT_GET) {
+        LOG_DEBUG("Ok, parsed: entity type = %, id = %", static_cast<uint16_t>(rt.ent_type), rt.ent_id);
+        if (!db_.is_entity_exists(rt.ent_type, rt.ent_id)) {
+            LOG_DEBUG("Does not exists")
             send_reply(req, st_404);
-        } else if (rt.act == ActionType::ENT_GET) {
-            LOG_DEBUG("Ok, parsed: entity type = %, id = %", static_cast<uint16_t>(rt.ent_type), rt.ent_id);
-            if (!db_.is_entity_exists(rt.ent_type, rt.ent_id)) {
-                LOG_DEBUG("Does not exists")
-                send_reply(req, st_404);
-            } else {
-                msg_ = db_.get_entity(rt.ent_type, rt.ent_id);
-                LOG_DEBUG("Got json % with size %", msg_, msg_.size())
-                send_reply(req, st_200, msg_.c_str());
-            }
         } else {
-            send_reply(req, "501 Not implemented");
+            msg_ = db_.get_entity(rt.ent_type, rt.ent_id);
+            LOG_DEBUG("Got json % with size %", msg_, msg_.size())
+            send_reply(req, st_200, msg_.c_str());
         }
-    } catch (...) {
-        send_reply(req, st_400, "{}");
+    } else if (rt.act == ActionType::CREATE) {
+        if (db_.is_entity_exists(rt.ent_type, rt.ent_id)) {
+            send_reply(req, st_400, "{}");
+        } else {
+            if (create_db_entity_from_json(rt.ent_type, req->body, req->bodylen)) {
+                send_reply(req, st_200, "{}");
+            } else {
+                send_reply(req, st_400);
+            }
+        }
+    } else if (rt.act == ActionType::UPDATE) {
+        if (!db_.is_entity_exists(rt.ent_type, rt.ent_id)) {
+            send_reply(req, st_400, "{}");
+        } else {
+            if (update_db_entity_from_json(rt.ent_type, req->body, req->bodylen)) {
+                send_reply(req, st_200, "{}");
+            } else {
+                send_reply(req, st_400);
+            }
+        }
+    } else {
+        send_reply(req, "501 Not implemented");
     }
 
     return WS_REPLY_FINISHED;
 }
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 WebServer::ReqType WebServer::match_action(std::string method, char *uri) {
@@ -118,6 +138,36 @@ WebServer::ReqType WebServer::match_action(std::string method, char *uri) {
 }
 
 std::vector<size_t> WebServer::split_params(char *uri) {
-    //TODO: Throw if invalid params
+    //TODO: Throw 400 if invalid params
     return {};
+}
+
+bool WebServer::create_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen) {
+    try {
+        auto j = json::parse(body, body + bodylen);
+        if (type == pod::DATA_TYPE::User) {
+            pod::User d = j;
+            db_.update(d);
+        } else if (type == pod::DATA_TYPE::Location) {
+            pod::Location d = j;
+            db_.update(d);
+        } else if (type == pod::DATA_TYPE::Visit) {
+            pod::Visit d = j;
+            db_.update(d);
+        }
+    } catch (std::exception &e) {
+        LOG_INFO("Exception while parsing json: %", e.what());
+        return false;
+    }
+
+    return true;
+}
+
+bool WebServer::update_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen) {
+    try {
+        auto j = json::parse(body, body + bodylen);
+    } catch (std::exception &e) {
+        LOG_INFO("Exception while parsing json: %", e.what());
+        return false;
+    }
 }

@@ -1,5 +1,4 @@
-#!/bin/bash
-
+#!/bin/sh
 # Place with zip on server side
 SERVER_PATH=/tmp/data
 
