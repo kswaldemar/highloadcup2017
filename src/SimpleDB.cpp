@@ -2,16 +2,10 @@
 // Created by valdemar on 13.08.17.
 //
 #include "WebServer.h"
-#include "SimpleDB.h"
-#include "SimpleLog.h"
-
-#include <json.hpp>
 
 #include <experimental/filesystem>
 
 #include <fstream>
-#include <string_view>
-#include <cstdint>
 
 using nlohmann::json;
 namespace fs = std::experimental::filesystem;
@@ -113,7 +107,7 @@ std::string SimpleDB::location_average(id_t id,
         ok = ok && (!to_date   || v.visited_at < *to_date);
         if (from_age || to_age || gender) {
             const auto &u = users_[v.user];
-            ok = ok && (!gender || *gender != u.gender[0]);
+            ok = ok && (!gender || *gender == u.gender[0]);
             //TODO: Add from_age, to_age
         }
         if (ok) {
@@ -123,7 +117,7 @@ std::string SimpleDB::location_average(id_t id,
     }
     cnt = std::max<size_t>(cnt, 1);
     mean /= cnt;
-    static const uint32_t mul = 10000;
+    static const uint32_t mul = 100000;
     mean = std::round(mean * mul) / mul;
     char buf[30] = {};
     sprintf(buf, "{\"avg\": %g}", mean);
