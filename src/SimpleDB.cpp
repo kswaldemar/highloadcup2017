@@ -1,7 +1,7 @@
 //
 // Created by valdemar on 13.08.17.
 //
-
+#include "WebServer.h"
 #include "SimpleDB.h"
 #include "SimpleLog.h"
 
@@ -10,6 +10,7 @@
 #include <experimental/filesystem>
 
 #include <fstream>
+#include <string_view>
 #include <cstdint>
 
 using nlohmann::json;
@@ -99,12 +100,17 @@ std::string SimpleDB::location_json(id_t id) {
     return nlohmann::json(locations_[id]).dump();
 }
 
-std::string SimpleDB::location_average(id_t id) {
+std::string SimpleDB::location_average(id_t id,
+                                       std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
+                                       std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,
+                                       std::optional<char> gender) {
     const auto &loc = locations_[id];
     double mean = 0;
     size_t cnt = 0;
+    bool ok;
     for (const auto &[v_id, v] : visits_) {
-        if (v.location == id) {
+        ok = v.location == id;
+        if (ok) {
             mean += v.mark;
             ++cnt;
         }
@@ -118,7 +124,9 @@ std::string SimpleDB::location_average(id_t id) {
     return buf;
 }
 
-std::string SimpleDB::user_visits(id_t id) {
+std::string SimpleDB::user_visits(id_t id,
+                                  std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
+                                  std::optional<std::string_view> country, std::optional<double> to_distance) {
     struct desc_t {
         desc_t(uint8_t mark, size_t visited_at, const char *place_ptr)
             : mark(mark),
@@ -132,8 +140,10 @@ std::string SimpleDB::user_visits(id_t id) {
     };
 
     std::vector<desc_t> values;
+    bool ok;
     for (const auto &[v_id, v] : visits_) {
-        if (v.user == id) {
+        ok = v.user == id;
+        if (ok) {
             const auto &loc = locations_[v.location];
             values.emplace_back(v.mark, v.visited_at, loc.place.c_str());
         }
@@ -201,5 +211,3 @@ std::string SimpleDB::get_entity(pod::DATA_TYPE type, id_t id) {
             return "";
     }
 }
-
-
