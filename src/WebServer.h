@@ -45,7 +45,7 @@ private:
     bool create_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen);
     bool update_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen);
 
-    std::vector<size_t> split_params(char *uri);
+    std::vector<size_t> split_validate_params(ActionType type, char *uri);
 
     std::string msg_;
     SimpleDB db_;

@@ -35,8 +35,8 @@ WebServer::WebServer(const std::string root_dir)
 int WebServer::reply(ws_request_t *req) {
     LOG_INFO("Request %, Method %", req->uri, req->method);
     try {
-        auto params = split_params(req->uri);
         ReqType rt = match_action(req->method, req->uri);
+        auto params = split_validate_params(rt.act, req->uri);
         switch (rt.act) {
             case ActionType::ENT_GET:
                 reply_entity_get(req, rt.ent_type, rt.ent_id);
@@ -102,12 +102,22 @@ void WebServer::reply_entity_update(ws_request_t *req, pod::DATA_TYPE type, uint
 
 void WebServer::reply_average(ws_request_t *req, uint32_t id) {
     LOG_DEBUG("Calculate average for location_id %", id);
-    send_reply(req, "501 Not implemented");
+    if (!db_.is_entity_exists(pod::DATA_TYPE::Location, id)) {
+        send_reply(req, st_404);
+    } else {
+        msg_ = db_.location_average(id);
+        send_reply(req, st_200, msg_.c_str());
+    }
 }
 
 void WebServer::reply_visits(ws_request_t *req, uint32_t id) {
     LOG_DEBUG("Calculate visits for user_id %", id);
-    send_reply(req, "501 Not implemented");
+    if (!db_.is_entity_exists(pod::DATA_TYPE::User, id)) {
+         send_reply(req, st_404);
+    } else {
+        msg_ = db_.user_visits(id);
+        send_reply(req, st_200, msg_.c_str());
+    }
 }
 
 
@@ -183,25 +193,31 @@ WebServer::ReqType WebServer::match_action(std::string method, char *uri) {
     return ret;
 }
 
-std::vector<size_t> WebServer::split_params(char *uri) {
+std::vector<size_t> WebServer::split_validate_params(ActionType type, char *uri) {
     //TODO: Throw error if invalid params, including type checking
     return {};
 }
 
 bool WebServer::create_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen) {
     auto j = json::parse(body, body + bodylen);
-    if (db_.is_entity_exists(type, j["id"].get<uint32_t>())) {
+    uint32_t id = j["id"].get<uint32_t>();
+    if (db_.is_entity_exists(type, id)) {
         return false;
     }
-
+    //TODO: Add fields value validation (especially gender)
+    //TODO: Check that there no extra fields
     if (type == pod::DATA_TYPE::User) {
         pod::User d = j;
+        d.id = id;
         db_.update(d);
     } else if (type == pod::DATA_TYPE::Location) {
         pod::Location d = j;
+        d.id = id;
         db_.update(d);
     } else if (type == pod::DATA_TYPE::Visit) {
+        //TODO: Also should validate that corresponding user and locations already exists
         pod::Visit d = j;
+        d.id = id;
         db_.update(d);
     }
     return true;
@@ -209,4 +225,8 @@ bool WebServer::create_db_entity_from_json(pod::DATA_TYPE type, char *body, int 
 
 bool WebServer::update_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen) {
     auto j = json::parse(body, body + bodylen);
+    //TODO: Implement
+    //TODO: Validate fields value
+    //TODO: Check that there is no extra or wrong fields
+    return false;
 }

@@ -26,6 +26,8 @@ public:
     std::string visit_json(id_t id);
     std::string location_json(id_t id);
 
+    std::string location_average(id_t id);
+    std::string user_visits(id_t id);
 
     //Post interface
     bool update(const pod::User &usr);
@@ -33,10 +35,11 @@ public:
     bool update(const pod::Visit &loc);
 
 private:
+    using locations_t = std::map<id_t, pod::Location>;
 
     SimpleDB() {};
 
     std::map<id_t, pod::User> users_;
-    std::map<id_t, pod::Location> locations_;
+    locations_t locations_;
     std::map<id_t, pod::Visit> visits_;
 };
