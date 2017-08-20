@@ -104,7 +104,6 @@ std::string SimpleDB::location_average(id_t id,
                                        std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
                                        std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,
                                        std::optional<char> gender) {
-    const auto &loc = locations_[id];
     double mean = 0;
     size_t cnt = 0;
     bool ok;
@@ -122,6 +121,7 @@ std::string SimpleDB::location_average(id_t id,
             ++cnt;
         }
     }
+    cnt = std::max<size_t>(cnt, 1);
     mean /= cnt;
     static const uint32_t mul = 10000;
     mean = std::round(mean * mul) / mul;
