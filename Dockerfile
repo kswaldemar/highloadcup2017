@@ -18,7 +18,7 @@ ADD build-release/web-server .
 ADD server-run.sh .
 ADD data local-data
 
-ADD build-release/3rdparty/website/libwebsite.so /lib
+ADD 3rdparty/website/lib /lib
 ADD docker-libs /lib
 
 EXPOSE 80
