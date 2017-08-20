@@ -110,6 +110,13 @@ std::string SimpleDB::location_average(id_t id,
     bool ok;
     for (const auto &[v_id, v] : visits_) {
         ok = v.location == id;
+        ok = ok && (!from_date || v.visited_at > *from_date);
+        ok = ok && (!to_date   || v.visited_at < *to_date);
+        if (from_age || to_age || gender) {
+            const auto &u = users_[v.user];
+            ok = ok && (!gender || *gender != u.gender[0]);
+            //TODO: Add from_age, to_age
+        }
         if (ok) {
             mean += v.mark;
             ++cnt;
@@ -126,7 +133,7 @@ std::string SimpleDB::location_average(id_t id,
 
 std::string SimpleDB::user_visits(id_t id,
                                   std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
-                                  std::optional<std::string_view> country, std::optional<double> to_distance) {
+                                  std::optional<std::string_view> country, std::optional<uint32_t> to_distance) {
     struct desc_t {
         desc_t(uint8_t mark, size_t visited_at, const char *place_ptr)
             : mark(mark),
@@ -143,8 +150,18 @@ std::string SimpleDB::user_visits(id_t id,
     bool ok;
     for (const auto &[v_id, v] : visits_) {
         ok = v.user == id;
+        if (!ok) {
+            continue;
+        }
+
+        ok = ok && (!from_date || v.visited_at > *from_date);
+        ok = ok && (!to_date   || v.visited_at < *to_date);
+
         if (ok) {
             const auto &loc = locations_[v.location];
+            if ((country && *country != loc.country) || (to_distance && *to_distance <= loc.distance)) {
+                continue;
+            }
             values.emplace_back(v.mark, v.visited_at, loc.place.c_str());
         }
     }

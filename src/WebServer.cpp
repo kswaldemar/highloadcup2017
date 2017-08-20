@@ -208,11 +208,8 @@ void WebServer::reply_visits(ws_request_t *req, uint32_t id, const uri_params_t 
     } else {
         std::optional<uint32_t> from_date = optional_to_uint(get_param_val(params, "fromDate"));
         std::optional<uint32_t> to_date = optional_to_uint(get_param_val(params, "toDate"));;
+        std::optional<uint32_t> to_distance = optional_to_uint(get_param_val(params, "toDistance"));
         std::optional<std::string_view> country = get_param_val(params, "country");
-        std::optional<double> to_distance;
-        if (auto val = get_param_val(params, "toDistance")) {
-            to_distance = strtod(val->data(), nullptr);
-        }
 
         LOG_DEBUG("User visits filter: [fromDate=%, toDate=%, country=%, toDistance=%]",
                   from_date.value_or(0), to_date.value_or(0), country.value_or("None"), to_distance.value_or(0));

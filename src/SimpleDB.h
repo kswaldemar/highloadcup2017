@@ -31,7 +31,7 @@ public:
                                  std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,
                                  std::optional<char> gender);
     std::string user_visits(id_t id, std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
-                            std::optional<std::string_view> country, std::optional<double> to_distance);
+                            std::optional<std::string_view> country, std::optional<uint32_t> to_distance);
 
     //Post interface
     bool update(const pod::User &usr);
