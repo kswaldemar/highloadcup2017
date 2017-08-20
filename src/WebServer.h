@@ -52,7 +52,7 @@ private:
     bool create_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen);
     bool update_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen);
 
-    bool check_and_populate(ActionType type, std::string_view key, std::string_view value);
+    bool check_param_correct(ActionType type, std::string_view key, std::string_view value);
 
     uri_params_t split_validate_params(ActionType type, char *uri);
 

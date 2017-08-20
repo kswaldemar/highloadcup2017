@@ -1,6 +1,8 @@
 #include "WebServer.h"
 #include "SimpleDB.h"
 
+#include "urldecode.h"
+
 extern "C" {
 #include <website.h>
 }
@@ -207,7 +209,7 @@ void WebServer::reply_visits(ws_request_t *req, uint32_t id, const uri_params_t 
         send_reply(req, st_404);
     } else {
         std::optional<uint32_t> from_date = optional_to_uint(get_param_val(params, "fromDate"));
-        std::optional<uint32_t> to_date = optional_to_uint(get_param_val(params, "toDate"));;
+        std::optional<uint32_t> to_date = optional_to_uint(get_param_val(params, "toDate"));
         std::optional<uint32_t> to_distance = optional_to_uint(get_param_val(params, "toDistance"));
         std::optional<std::string_view> country = get_param_val(params, "country");
 
@@ -300,7 +302,6 @@ WebServer::uri_params_t WebServer::split_validate_params(ActionType type, char *
         return {};
     }
 
-    //TODO: Support urlencoded for parameters value
     uri_params_t ret;
     ++start_it;
     while (start_it != uri_end) {
@@ -318,7 +319,12 @@ WebServer::uri_params_t WebServer::split_validate_params(ActionType type, char *
             *next++ = '\0';
         }
 
-        if (!check_and_populate(type, start_it, eq)) {
+        if (eq[0] == '%') {
+            //Looks like urlencoded
+            dlib::inplace_urldecode(eq);
+        }
+
+        if (!check_param_correct(type, start_it, eq)) {
             throw std::logic_error("Invalid parameter or value");
         }
 
@@ -364,7 +370,7 @@ bool WebServer::update_db_entity_from_json(pod::DATA_TYPE type, char *body, int 
     return false;
 }
 
-bool WebServer::check_and_populate(ActionType type, std::string_view key, std::string_view value) {
+bool WebServer::check_param_correct(ActionType type, std::string_view key, std::string_view value) {
     LOG_DEBUG("Validate params pair '%=%'", key, value);
 
     if (type == ActionType::ENT_GET || type == ActionType::UPDATE) {
