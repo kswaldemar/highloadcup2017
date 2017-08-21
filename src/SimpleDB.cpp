@@ -6,6 +6,7 @@
 #include <experimental/filesystem>
 
 #include <fstream>
+#include <ctime>
 
 using nlohmann::json;
 namespace fs = std::experimental::filesystem;
@@ -28,10 +29,10 @@ pod::DATA_TYPE type_by_filename(const std::string &filename) {
 } //anonymous namespace
 
 
-SimpleDB SimpleDB::from_json_folder(const std::string &folder) {
+SimpleDB SimpleDB::from_folder(const std::string &folder) {
     SimpleDB ret;
     json data;
-    LOG_INFO("Starting parsing json from folder %", folder);
+    LOG_URGENT("Starting parsing json from folder %", folder);
     for (const auto &p : fs::directory_iterator(folder)) {
         const auto filename = p.path().filename().string();
         const auto type = type_by_filename(filename);
@@ -45,7 +46,7 @@ SimpleDB SimpleDB::from_json_folder(const std::string &folder) {
             LOG_ERROR("Cannot open file %", file_str);
             continue;
         } else {
-            LOG_INFO("Parse file %", filename);
+            LOG_URGENT("Parse file %", filename);
         }
         in >> data;
         if (type == pod::DATA_TYPE::User) {
@@ -65,7 +66,16 @@ SimpleDB SimpleDB::from_json_folder(const std::string &folder) {
             }
         }
     }
-    LOG_INFO("Json parsing done");
+    LOG_URGENT("Json parsing done");
+
+    LOG_URGENT("Extract time");
+    std::ifstream options(folder + "/options.txt");
+    time_t ts;
+    options >> ts;
+    LOG_INFO("Read timestamp %", ts);
+    ret.start_timestamp_ = *std::localtime(&ts);
+    LOG_URGENT("Start date %", std::put_time(&ret.start_timestamp_, "%d/%m/%Y %T (%Z)"));
+
     return ret;
 }
 
@@ -108,7 +118,24 @@ std::string SimpleDB::location_average(id_t id,
         if (from_age || to_age || gender) {
             const auto &u = users_[v.user];
             ok = ok && (!gender || *gender == u.gender[0]);
-            //TODO: Add from_age, to_age
+            if (ok && (from_age || to_age)) {
+                time_t ts;
+                if (from_age) {
+                    auto tm = start_timestamp_;
+                    tm.tm_year -= *from_age;
+                    ts = std::mktime(&tm);
+                    ok = ok && u.birth_date < ts;
+                    //LOG_DEBUG("Birth date % > % = %", u.birth_date, ts, ok);
+                }
+                if (ok && to_age) {
+                    auto tm = start_timestamp_;
+                    tm.tm_year -= *to_age;
+                    ts = std::mktime(&tm);
+                    ok = ok && u.birth_date > ts;
+                    auto b_tm = *std::localtime(&u.birth_date);
+                    //LOG_DEBUG("Birth date % (%) < % (%) = %, mark %", u.birth_date, std::put_time(&b_tm, "%d/%m/%Y %T (%Z)"), ts, std::put_time(&tm, "%d/%m/%Y %T (%Z)"), ok, (int)v.mark);
+                }
+            }
         }
         if (ok) {
             mean += v.mark;

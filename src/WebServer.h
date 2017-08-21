@@ -30,10 +30,6 @@ public:
         pod::DATA_TYPE ent_type;
     };
 
-    struct VisitsParams {
-
-    };
-
     WebServer(const std::string root_dir);
 
     int reply(ws_request_t *req);

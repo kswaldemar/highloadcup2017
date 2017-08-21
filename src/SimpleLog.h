@@ -121,3 +121,5 @@ void logline(const char *type, const char *format, Args... args) {
 #define LOG_ERROR(format, ...)
 #define LOG_DEBUG(format, ...)
 #endif
+
+#define LOG_URGENT(format, ...) LOG("WEBSERVER", format, ##__VA_ARGS__);

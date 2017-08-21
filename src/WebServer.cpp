@@ -75,10 +75,18 @@ std::optional<uint32_t> optional_to_uint(const std::optional<std::string_view> &
     return {};
 }
 
+bool is_valid_uri_param(std::string_view val) {
+    return val.find('?') == std::string_view::npos;
+}
+
+bool is_valid_gender(std::string_view gender) {
+    return gender.size() == 1 && (gender[0] == 'f' || gender[0] == 'm');
+}
+
 } // anonymous namespace
 
 WebServer::WebServer(const std::string root_dir)
-    : db_(SimpleDB::from_json_folder(root_dir)) {
+    : db_(SimpleDB::from_folder(root_dir)) {
 }
 
 
@@ -88,8 +96,7 @@ int WebServer::reply(ws_request_t *req) {
         ReqType rt = match_action(req->method, req->uri);
         auto params = split_validate_params(rt.act, req->uri);
         std::string params_str;
-        for (const auto &
-        [k, v] : params) {
+        for (const auto &[k, v] : params) {
             if (!params_str.empty()) {
                 params_str += ", ";
             }
@@ -319,10 +326,11 @@ WebServer::uri_params_t WebServer::split_validate_params(ActionType type, char *
             *next++ = '\0';
         }
 
-        if (eq[0] == '%') {
-            //Looks like urlencoded
-            dlib::inplace_urldecode(eq);
+        if (!is_valid_uri_param(eq)) {
+            throw std::logic_error("Value contains forbidden symbol");
         }
+
+        dlib::inplace_urldecode(eq);
 
         if (!check_param_correct(type, start_it, eq)) {
             throw std::logic_error("Invalid parameter or value");
@@ -343,10 +351,11 @@ bool WebServer::create_db_entity_from_json(pod::DATA_TYPE type, char *body, int 
     if (db_.is_entity_exists(type, id)) {
         return false;
     }
-    //TODO: Add fields value validation (especially gender)
-    //TODO: Check that there no extra fields
     if (type == pod::DATA_TYPE::User) {
         pod::User d = j;
+        if (!is_valid_gender(d.gender)) {
+            return false;
+        }
         d.id = id;
         db_.update(d);
     } else if (type == pod::DATA_TYPE::Location) {
@@ -354,8 +363,10 @@ bool WebServer::create_db_entity_from_json(pod::DATA_TYPE type, char *body, int 
         d.id = id;
         db_.update(d);
     } else if (type == pod::DATA_TYPE::Visit) {
-        //TODO: Also should validate that corresponding user and locations already exists
         pod::Visit d = j;
+        if (!db_.location_exists(d.location) || !db_.user_exists(d.user) || d.mark > 5) {
+            return false;
+        }
         d.id = id;
         db_.update(d);
     }
@@ -367,6 +378,14 @@ bool WebServer::update_db_entity_from_json(pod::DATA_TYPE type, char *body, int 
     //TODO: Implement
     //TODO: Validate fields value
     //TODO: Check that there is no extra or wrong fields
+    //switch (type) {
+    //    case pod::DATA_TYPE::User:break;
+    //    case pod::DATA_TYPE::Location:break;
+    //    case pod::DATA_TYPE::Visit:break;
+    //    case pod::DATA_TYPE::None:break;
+    //}
+
+
     return false;
 }
 
@@ -386,9 +405,9 @@ bool WebServer::check_param_correct(ActionType type, std::string_view key, std::
             ok = key == "fromDate" || key == "toDate" || key == "fromAge" || key == "toAge" || key == "gender";
             ok = ok && (key != "fromDate" || is_uint(value));
             ok = ok && (key != "toDate" || is_uint(value));
-            ok = ok && (key != "fromAge" || is_int(value));
-            ok = ok && (key != "toAge" || is_int(value));
-            ok = ok && (key != "gender" || (value.size() == 1 && (value[0] == 'f' || value[0] == 'm')));
+            ok = ok && (key != "fromAge" || is_uint(value));
+            ok = ok && (key != "toAge" || is_uint(value));
+            ok = ok && (key != "gender" || is_valid_gender(value));
             break;
         }
         case ActionType::VISITS: {

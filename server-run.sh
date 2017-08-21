@@ -6,10 +6,7 @@ echo "Extract zip"
 if [ -r ${SERVER_PATH}/data.zip ]; then
     echo "Found data zip in tmp folder"
     unzip -j ${SERVER_PATH}/data.zip '*.json' -d data
-else
-    echo "Local run"
-    mkdir -p data
-    cp local-data/* data/
+    cp ${SERVER_PATH}/options.txt ./data
 fi
 
 echo "Run server"

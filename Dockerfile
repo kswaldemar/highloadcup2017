@@ -16,7 +16,6 @@ VOLUME /tmp
 
 ADD build-release/web-server .
 ADD server-run.sh .
-ADD data local-data
 
 ADD 3rdparty/website/lib /lib
 ADD docker-libs /lib

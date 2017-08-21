@@ -1,0 +1,3 @@
+[submodule "testing/hlcupdocs"]
+	path = testing/hlcupdocs
+	url = https://github.com/sat2707/hlcupdocs.git

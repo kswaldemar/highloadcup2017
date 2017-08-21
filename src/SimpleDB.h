@@ -13,7 +13,7 @@ class SimpleDB {
 public:
     using id_t = uint32_t;
 
-    static SimpleDB from_json_folder(const std::string &folder);
+    static SimpleDB from_folder(const std::string &folder);
 
     bool is_entity_exists(pod::DATA_TYPE type, id_t id);
     std::string get_entity(pod::DATA_TYPE type, id_t id);
@@ -46,4 +46,5 @@ private:
     std::map<id_t, pod::User> users_;
     locations_t locations_;
     std::map<id_t, pod::Visit> visits_;
+    std::tm start_timestamp_;
 };

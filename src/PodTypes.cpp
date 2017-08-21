@@ -28,7 +28,7 @@ void from_json(const nlohmann::json &j, User &u) {
     u.first_name = j.at("first_name").get<std::string>();
     u.last_name = j.at("last_name").get<std::string>();
     u.gender = j.at("gender").get<std::string>();
-    u.birth_date = j.at("birth_date").get<int64_t>();
+    u.birth_date = j.at("birth_date").get<time_t>();
 }
 
 bool is_valid(const User &u) {

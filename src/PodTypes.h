@@ -23,7 +23,7 @@ struct User {
     std::string first_name;
     std::string last_name;
     std::string gender;
-    int64_t birth_date;
+    time_t birth_date;
 };
 
 void to_json(nlohmann::json &j, const User &u);
