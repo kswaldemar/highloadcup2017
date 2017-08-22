@@ -18,17 +18,20 @@ using nlohmann::json;
 
 namespace {
 
-void send_reply(ws_request_t *req, const char *status_line, const char *data) {
-    ws_statusline(req, status_line);
-    ws_add_header(req, "Content-Type", "application/json; charset=utf-8");
-    ws_add_header(req, "Server", "hlcup-1.0");
-    ws_reply_data(req, data, strlen(data));
+void send_reply(my_request_t *req, const char *status_line, const char *data) {
+    ws_statusline(&req->native, status_line);
+    ws_add_header(&req->native, "Content-Type", "application/json; charset=utf-8");
+    ws_add_header(&req->native, "Server", "hlcup-1.0");
+    size_t data_len = strlen(data);
+    memcpy(req->buf, data, data_len);
+    req->buf[data_len] = '\0';
+    ws_reply_data(&req->native, req->buf, data_len);
 }
 
-void send_reply(ws_request_t *req, const char *status_line) {
-    ws_statusline(req, status_line);
-    ws_add_header(req, "Server", "hlcup-1.0");
-    ws_reply_data(req, "", 0);
+void send_reply(my_request_t *req, const char *status_line) {
+    ws_statusline(&req->native, status_line);
+    ws_add_header(&req->native, "Server", "hlcup-1.0");
+    ws_reply_data(&req->native, "", 0);
 }
 
 bool is_uint(std::string_view str) {
@@ -178,11 +181,12 @@ WebServer::WebServer(const std::string root_dir)
 }
 
 
-int WebServer::reply(ws_request_t *req) {
-    LOG_INFO("Request %, Method %", req->uri, req->method);
+int WebServer::reply(my_request_t *req) {
+    auto &native = req->native;
+    LOG_INFO("Request %, Method %", native.uri, native.method);
     try {
-        ReqType rt = match_action(req->method, req->uri);
-        auto params = split_validate_params(rt.act, req->uri);
+        ReqType rt = match_action(native.method, native.uri);
+        auto params = split_validate_params(rt.act, native.uri);
         std::string params_str;
         for (const auto &[k, v] : params) {
             if (!params_str.empty()) {
@@ -224,32 +228,32 @@ int WebServer::reply(ws_request_t *req) {
     return WS_REPLY_FINISHED;
 }
 
-void WebServer::reply_entity_get(ws_request_t *req, pod::DATA_TYPE type, uint32_t id) {
+void WebServer::reply_entity_get(my_request_t *req, pod::DATA_TYPE type, uint32_t id) {
     LOG_DEBUG("Ok, parsed: entity type = %, id = %", static_cast<uint16_t>(type), id);
     if (!db_.is_entity_exists(type, id)) {
         LOG_DEBUG("Does not exists")
         send_reply(req, st_404);
     } else {
-        msg_ = db_.get_entity(type, id);
-        LOG_DEBUG("Got json % with size %", msg_, msg_.size())
-        send_reply(req, st_200, msg_.c_str());
+        std::string msg = db_.get_entity(type, id);
+        LOG_DEBUG("Got json % with size %", msg, msg.size())
+        send_reply(req, st_200, msg.c_str());
     }
 }
 
-void WebServer::reply_entity_create(ws_request_t *req, pod::DATA_TYPE type) {
-    if (create_db_entity_from_json(type, req->body, req->bodylen)) {
+void WebServer::reply_entity_create(my_request_t *req, pod::DATA_TYPE type) {
+    if (create_db_entity_from_json(type, req->native.body, req->native.bodylen)) {
         send_reply(req, st_200, "{}");
     } else {
         send_reply(req, st_400);
     }
 }
 
-void WebServer::reply_entity_update(ws_request_t *req, pod::DATA_TYPE type, uint32_t id) {
+void WebServer::reply_entity_update(my_request_t *req, pod::DATA_TYPE type, uint32_t id) {
     LOG_DEBUG("Update entity id %", id);
     if (!db_.is_entity_exists(type, id)) {
         send_reply(req, st_404);
     } else {
-        if (update_db_entity_from_json(type, id, req->body, req->bodylen)) {
+        if (update_db_entity_from_json(type, id, req->native.body, req->native.bodylen)) {
             send_reply(req, st_200, "{}");
         } else {
             LOG_DEBUG("Update failed for some reason");
@@ -258,7 +262,7 @@ void WebServer::reply_entity_update(ws_request_t *req, pod::DATA_TYPE type, uint
     }
 }
 
-void WebServer::reply_average(ws_request_t *req, uint32_t id, const uri_params_t &params) {
+void WebServer::reply_average(my_request_t *req, uint32_t id, const uri_params_t &params) {
     LOG_DEBUG("Calculate average for location_id %", id);
     if (!db_.is_entity_exists(pod::DATA_TYPE::Location, id)) {
         send_reply(req, st_404);
@@ -283,23 +287,12 @@ void WebServer::reply_average(ws_request_t *req, uint32_t id, const uri_params_t
                   from_age.value_or(0), to_age.value_or(0),
                   gender.value_or('.'));
 
-        msg_ = db_.location_average(id, from_date, to_date, from_age, to_age, gender);
-        send_reply(req, st_200, msg_.c_str());
+        std::string msg = db_.location_average(id, from_date, to_date, from_age, to_age, gender);
+        send_reply(req, st_200, msg.c_str());
     }
 }
 
-std::optional<std::string_view> WebServer::get_param_val(const WebServer::uri_params_t &params,
-                                                         std::string_view key) const {
-
-    if (auto it = find_if(params.begin(), params.end(), [&key](const kv_param_t &kv) { return kv.first == key; });
-        it != params.end()) {
-
-        return it->second;
-    }
-    return {};
-}
-
-void WebServer::reply_visits(ws_request_t *req, uint32_t id, const uri_params_t &params) {
+void WebServer::reply_visits(my_request_t *req, uint32_t id, const uri_params_t &params) {
     LOG_DEBUG("Calculate visits for user_id %", id);
     if (!db_.is_entity_exists(pod::DATA_TYPE::User, id)) {
         send_reply(req, st_404);
@@ -312,9 +305,20 @@ void WebServer::reply_visits(ws_request_t *req, uint32_t id, const uri_params_t 
         LOG_DEBUG("User visits filter: [fromDate=%, toDate=%, country=%, toDistance=%]",
                   from_date.value_or(0), to_date.value_or(0), country.value_or("None"), to_distance.value_or(0));
 
-        msg_ = db_.user_visits(id, from_date, to_date, country, to_distance);
-        send_reply(req, st_200, msg_.c_str());
+        std::string msg = db_.user_visits(id, from_date, to_date, country, to_distance);
+        send_reply(req, st_200, msg.c_str());
     }
+}
+
+std::optional<std::string_view> WebServer::get_param_val(const WebServer::uri_params_t &params,
+                                                         std::string_view key) const {
+
+    if (auto it = find_if(params.begin(), params.end(), [&key](const kv_param_t &kv) { return kv.first == key; });
+        it != params.end()) {
+
+        return it->second;
+    }
+    return {};
 }
 
 
