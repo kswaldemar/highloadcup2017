@@ -23,7 +23,6 @@ pod::DATA_TYPE type_by_filename(const std::string &filename) {
     } else {
         return pod::DATA_TYPE::None;
     }
-
 }
 
 } //anonymous namespace
@@ -76,6 +75,8 @@ SimpleDB SimpleDB::from_folder(const std::string &folder) {
     LOG_INFO("Read timestamp %", ts);
     ret.start_timestamp_ = *std::localtime(&ts);
     LOG_URGENT("Start date %", std::put_time(&ret.start_timestamp_, "%d/%m/%Y %T (%Z)"));
+
+    ret.prepare();
 
     return ret;
 }
@@ -138,9 +139,9 @@ std::string SimpleDB::location_average(id_t id,
     double mean = 0;
     size_t cnt = 0;
     bool ok;
-    for (const auto &[v_id, v] : visits_) {
-        ok = v.location == id;
-        ok = ok && (!from_date || v.visited_at > *from_date);
+    for (auto v_id : loc2visits_[id]) {
+        const auto &v = visits_[v_id];
+        ok = (!from_date || v.visited_at > *from_date);
         ok = ok && (!to_date   || v.visited_at < *to_date);
         if (from_age || to_age || gender) {
             const auto &u = users_[v.user];
@@ -152,15 +153,12 @@ std::string SimpleDB::location_average(id_t id,
                     tm.tm_year -= *from_age;
                     ts = std::mktime(&tm);
                     ok = ok && u.birth_date < ts;
-                    //LOG_DEBUG("Birth date % > % = %", u.birth_date, ts, ok);
                 }
                 if (ok && to_age) {
                     auto tm = start_timestamp_;
                     tm.tm_year -= *to_age;
                     ts = std::mktime(&tm);
                     ok = ok && u.birth_date > ts;
-                    //auto b_tm = *std::localtime(&u.birth_date);
-                    //LOG_DEBUG("Birth date % (%) < % (%) = %, mark %", u.birth_date, std::put_time(&b_tm, "%d/%m/%Y %T (%Z)"), ts, std::put_time(&tm, "%d/%m/%Y %T (%Z)"), ok, (int)v.mark);
                 }
             }
         }
@@ -196,13 +194,10 @@ std::string SimpleDB::user_visits(id_t id,
 
     std::vector<desc_t> values;
     bool ok;
-    for (const auto &[v_id, v] : visits_) {
-        ok = v.user == id;
-        if (!ok) {
-            continue;
-        }
+    for (id_t v_id : u2visits_[id]) {
+        const auto &v = visits_[v_id];
 
-        ok = ok && (!from_date || v.visited_at > *from_date);
+        ok = (!from_date || v.visited_at > *from_date);
         ok = ok && (!to_date   || v.visited_at < *to_date);
 
         if (ok) {
@@ -237,6 +232,8 @@ void SimpleDB::create(const pod::Location &loc) {
 
 void SimpleDB::create(const pod::Visit &vis) {
     visits_[vis.id] = vis;
+    u2visits_[vis.user].insert(vis.id);
+    loc2visits_[vis.location].insert(vis.id);
 }
 
 pod::User &SimpleDB::user(id_t id) {
@@ -249,4 +246,11 @@ pod::Location &SimpleDB::location(id_t id) {
 
 pod::Visit &SimpleDB::visit(id_t id) {
     return visits_[id];
+}
+
+void SimpleDB::prepare() {
+    for (const auto &[id, v] : visits_) {
+        u2visits_[v.user].insert(id);
+        loc2visits_[v.location].insert(id);
+    }
 }

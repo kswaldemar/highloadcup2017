@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <set>
 
 class SimpleDB {
 public:
@@ -43,12 +44,19 @@ public:
     pod::Visit &visit(id_t id);
 
 private:
+    void prepare();
+
     using locations_t = std::map<id_t, pod::Location>;
+    using mapping_t = std::map<id_t, std::set<id_t>>;
 
     SimpleDB() {};
 
     std::map<id_t, pod::User> users_;
     locations_t locations_;
     std::map<id_t, pod::Visit> visits_;
+
+    mapping_t u2visits_;
+    mapping_t loc2visits_;
+
     std::tm start_timestamp_;
 };
