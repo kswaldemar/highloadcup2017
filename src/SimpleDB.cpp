@@ -334,15 +334,23 @@ bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len
     auto j = json::parse(body, body + body_len);
     switch (type) {
         case pod::DATA_TYPE::User: {
-            auto &u = users_[id];
-            return ::update(u, j);
+            auto u = users_[id];
+            if (::update(u, j)) {
+                users_[id] = u;
+                return true;
+            }
+            return false;
         }
         case pod::DATA_TYPE::Location: {
-            auto &loc = locations_[id];
-            return ::update(loc, j);
+            auto loc = locations_[id];
+            if (::update(loc, j)) {
+                locations_[id] = loc;
+                return true;
+            }
+            return false;
         }
         case pod::DATA_TYPE::Visit: {
-            auto &vis = visits_[id];
+            auto vis = visits_[id];
             uint32_t old_loc = vis.location;
             uint32_t old_user = vis.user;
             if (!::update(vis, j, *this)) {
@@ -352,6 +360,7 @@ bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len
             u2visits_[vis.user].insert(vis.id);
             loc2visits_[old_loc].erase(vis.id);
             loc2visits_[vis.location].insert(vis.id);
+            visits_[id] = vis;
             return true;
         }
         default: return false;
