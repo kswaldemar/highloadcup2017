@@ -66,7 +66,8 @@ SimpleDB SimpleDB::from_folder(const std::string &folder) {
             }
         }
     }
-    LOG_URGENT("Json parsing done");
+    LOG_URGENT("Json parsing done: users = %, locations = %, visits = %",
+               ret.users_.size(), ret.locations_.size(), ret.visits_.size());
 
     LOG_URGENT("Extract time");
     std::ifstream options(folder + "/options.txt");
