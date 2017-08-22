@@ -2,6 +2,8 @@
 #include "SimpleDB.h"
 #include "WebServer.h"
 
+#include <arpa/inet.h>
+
 #ifndef NDEBUG
 constexpr uint16_t PORT = 8080;
 #else
@@ -12,13 +14,21 @@ const std::string JSON_FOLDER = "./data";
 
 static WebServer g_handler(JSON_FOLDER);
 
-int reply(ws_request_t *req) {
+int reply(my_request_t *req) {
     return g_handler.reply(req);
 }
 
 int main() {
+    struct ev_loop *loop = ev_default_loop(0);
     ws_server_t serv;
-    ws_quickstart(&serv, "0.0.0.0", PORT, reply);
-    LOG_INFO("Starting webserver on port %", PORT);
-    ev_loop(ev_default_loop(0), 0);
+    ws_server_init(&serv, loop);
+    if (ws_add_tcp(&serv, inet_addr("0.0.0.0"), PORT) < 0) {
+        perror("Error binding port");
+    }
+    LOG_URGENT("Starting webserver on port %", PORT);
+    ws_REQUEST_STRUCT(&serv, my_request_t);
+    ws_REQUEST_CB(&serv, reply);
+
+    ws_server_start(&serv);
+    ev_loop(loop, 0);
 }
