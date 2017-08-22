@@ -15,17 +15,17 @@ public:
 
     static SimpleDB from_folder(const std::string &folder);
 
-    bool is_entity_exists(pod::DATA_TYPE type, id_t id);
-    std::string get_entity(pod::DATA_TYPE type, id_t id);
+    bool is_entity_exists(pod::DATA_TYPE type, id_t id) const;
+    std::string get_entity(pod::DATA_TYPE type, id_t id) const;
 
     //Get interface
-    bool user_exists(id_t id);
-    bool location_exists(id_t id);
-    bool visit_exists(id_t id);
+    bool user_exists(id_t id) const;
+    bool location_exists(id_t id) const;
+    bool visit_exists(id_t id) const;
 
-    std::string user_json(id_t id);
-    std::string visit_json(id_t id);
-    std::string location_json(id_t id);
+    std::string user_json(id_t id) const;
+    std::string visit_json(id_t id) const;
+    std::string location_json(id_t id) const;
 
     std::string location_average(id_t id, std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
                                  std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,
@@ -34,9 +34,13 @@ public:
                             std::optional<std::string_view> country, std::optional<uint32_t> to_distance);
 
     //Post interface
-    bool update(const pod::User &usr);
-    bool update(const pod::Location &loc);
-    bool update(const pod::Visit &loc);
+    void create(const pod::User &usr);
+    void create(const pod::Location &loc);
+    void create(const pod::Visit &loc);
+
+    pod::User &user(id_t id);
+    pod::Location &location(id_t id);
+    pod::Visit &visit(id_t id);
 
 private:
     using locations_t = std::map<id_t, pod::Location>;

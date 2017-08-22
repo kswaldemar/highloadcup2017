@@ -46,7 +46,7 @@ private:
 
     ReqType match_action(std::string method, char *uri);
     bool create_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen);
-    bool update_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen);
+    bool update_db_entity_from_json(pod::DATA_TYPE type, uint32_t id, char *body, int bodylen);
 
     bool check_param_correct(ActionType type, std::string_view key, std::string_view value);
 

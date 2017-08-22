@@ -80,28 +80,54 @@ SimpleDB SimpleDB::from_folder(const std::string &folder) {
 }
 
 //Public interface
-bool SimpleDB::user_exists(id_t id) {
+bool SimpleDB::is_entity_exists(pod::DATA_TYPE type, id_t id) const {
+    switch (type) {
+        case pod::DATA_TYPE::User:
+            return user_exists(id);
+        case pod::DATA_TYPE::Location:
+            return location_exists(id);
+        case pod::DATA_TYPE::Visit:
+            return visit_exists(id);
+        case pod::DATA_TYPE::None:
+            return false;
+    }
+}
+
+std::string SimpleDB::get_entity(pod::DATA_TYPE type, id_t id) const {
+    switch (type) {
+        case pod::DATA_TYPE::User:
+            return user_json(id);
+        case pod::DATA_TYPE::Location:
+            return location_json(id);
+        case pod::DATA_TYPE::Visit:
+            return visit_json(id);
+        case pod::DATA_TYPE::None:
+            return "";
+    }
+}
+
+bool SimpleDB::user_exists(id_t id) const {
     return users_.find(id) != users_.end();
 }
 
-bool SimpleDB::location_exists(id_t id) {
+bool SimpleDB::location_exists(id_t id) const {
     return locations_.find(id) != locations_.end();
 }
 
-bool SimpleDB::visit_exists(id_t id) {
+bool SimpleDB::visit_exists(id_t id) const {
     return visits_.find(id) != visits_.end();
 }
 
-std::string SimpleDB::user_json(id_t id) {
-    return nlohmann::json(users_[id]).dump();
+std::string SimpleDB::user_json(id_t id) const {
+    return nlohmann::json(users_.at(id)).dump();
 }
 
-std::string SimpleDB::visit_json(id_t id) {
-    return nlohmann::json(visits_[id]).dump();
+std::string SimpleDB::visit_json(id_t id) const {
+    return nlohmann::json(visits_.at(id)).dump();
 }
 
-std::string SimpleDB::location_json(id_t id) {
-    return nlohmann::json(locations_[id]).dump();
+std::string SimpleDB::location_json(id_t id) const {
+    return nlohmann::json(locations_.at(id)).dump();
 }
 
 std::string SimpleDB::location_average(id_t id,
@@ -132,7 +158,7 @@ std::string SimpleDB::location_average(id_t id,
                     tm.tm_year -= *to_age;
                     ts = std::mktime(&tm);
                     ok = ok && u.birth_date > ts;
-                    auto b_tm = *std::localtime(&u.birth_date);
+                    //auto b_tm = *std::localtime(&u.birth_date);
                     //LOG_DEBUG("Birth date % (%) < % (%) = %, mark %", u.birth_date, std::put_time(&b_tm, "%d/%m/%Y %T (%Z)"), ts, std::put_time(&tm, "%d/%m/%Y %T (%Z)"), ok, (int)v.mark);
                 }
             }
@@ -200,52 +226,26 @@ std::string SimpleDB::user_visits(id_t id,
     return "{\"visits\": " + ar.dump() + "}";
 }
 
-bool SimpleDB::update(const pod::User &usr) {
-    if (pod::is_valid(usr)) {
-        users_[usr.id] = usr;
-        return true;
-    }
-    return false;
+void SimpleDB::create(const pod::User &usr) {
+    users_[usr.id] = usr;
 }
 
-bool SimpleDB::update(const pod::Location &loc) {
-    if (pod::is_valid(loc)) {
-        locations_[loc.id] = loc;
-        return true;
-    }
-    return false;
+void SimpleDB::create(const pod::Location &loc) {
+    locations_[loc.id] = loc;
 }
 
-bool SimpleDB::update(const pod::Visit &vis) {
-    if (pod::is_valid(vis)) {
-        visits_[vis.id] = vis;
-        return true;
-    }
-    return false;
+void SimpleDB::create(const pod::Visit &vis) {
+    visits_[vis.id] = vis;
 }
 
-bool SimpleDB::is_entity_exists(pod::DATA_TYPE type, id_t id) {
-    switch (type) {
-        case pod::DATA_TYPE::User:
-            return user_exists(id);
-        case pod::DATA_TYPE::Location:
-            return location_exists(id);
-        case pod::DATA_TYPE::Visit:
-            return visit_exists(id);
-        case pod::DATA_TYPE::None:
-            return false;
-    }
+pod::User &SimpleDB::user(id_t id) {
+    return users_[id];
 }
 
-std::string SimpleDB::get_entity(pod::DATA_TYPE type, id_t id) {
-    switch (type) {
-        case pod::DATA_TYPE::User:
-            return user_json(id);
-        case pod::DATA_TYPE::Location:
-            return location_json(id);
-        case pod::DATA_TYPE::Visit:
-            return visit_json(id);
-        case pod::DATA_TYPE::None:
-            return "";
-    }
+pod::Location &SimpleDB::location(id_t id) {
+    return locations_[id];
+}
+
+pod::Visit &SimpleDB::visit(id_t id) {
+    return visits_[id];
 }
