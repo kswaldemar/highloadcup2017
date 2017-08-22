@@ -39,9 +39,7 @@ public:
     void create(const pod::Location &loc);
     void create(const pod::Visit &loc);
 
-    pod::User &user(id_t id);
-    pod::Location &location(id_t id);
-    pod::Visit &visit(id_t id);
+    bool update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len);
 
 private:
     void prepare();

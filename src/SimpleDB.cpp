@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <ctime>
+#include <json.hpp>
 
 using nlohmann::json;
 namespace fs = std::experimental::filesystem;
@@ -24,6 +25,99 @@ pod::DATA_TYPE type_by_filename(const std::string &filename) {
         return pod::DATA_TYPE::None;
     }
 }
+
+bool is_valid_gender(std::string_view gender) {
+    return gender.size() == 1 && (gender[0] == 'f' || gender[0] == 'm');
+}
+
+bool update(pod::User &u, const json &j) {
+    size_t cnt = 0;
+    size_t fields_cnt = j.size();
+    if (auto it = j.find("gender"); it != j.end()) {
+        std::string gender = it.value().get<std::string>();
+        if (!is_valid_gender(gender)) {
+            LOG_DEBUG("Invalid gender %", gender);
+            return false;
+        }
+        u.gender = gender;
+        ++cnt;
+    }
+    if (auto it = j.find("first_name"); it != j.end()) {
+        u.first_name = it.value().get<decltype(u.first_name)>();
+        ++cnt;
+    }
+    if (auto it = j.find("last_name"); it != j.end()) {
+        u.last_name = it.value().get<decltype(u.last_name)>();
+        ++cnt;
+    }
+    if (auto it = j.find("email"); it != j.end()) {
+        u.email = it.value().get<decltype(u.email)>();
+        ++cnt;
+    }
+    if (auto it = j.find("birth_date"); it != j.end()) {
+        u.birth_date = it.value().get<decltype(u.birth_date)>();
+        ++cnt;
+    }
+    LOG_DEBUG("Fields count %, handled %", fields_cnt, cnt);
+    return cnt == fields_cnt;
+}
+
+bool update(pod::Location &l, const json &j) {
+    size_t cnt = 0;
+    size_t fields_cnt = j.size();
+    if (auto it = j.find("place"); it != j.end()) {
+        l.place = it.value().get<decltype(l.place)>();
+        ++cnt;
+    }
+    if (auto it = j.find("country"); it != j.end()) {
+        l.country = it.value().get<decltype(l.country)>();
+        ++cnt;
+    }
+    if (auto it = j.find("distance"); it != j.end()) {
+        l.distance = it.value().get<decltype(l.distance)>();
+        ++cnt;
+    }
+    if (auto it = j.find("city"); it != j.end()) {
+        l.city = it.value().get<decltype(l.city)>();
+        ++cnt;
+    }
+    return cnt == fields_cnt;
+}
+
+bool update(pod::Visit &v, const json &j, const SimpleDB &db) {
+    size_t cnt = 0;
+    size_t fields_cnt = j.size();
+    if (auto it = j.find("visited_at"); it != j.end()) {
+        v.visited_at = it.value().get<decltype(v.visited_at)>();
+        ++cnt;
+    }
+    if (auto it = j.find("location"); it != j.end()) {
+        uint32_t loc_id = it.value().get<uint32_t>();
+        if (!db.location_exists(loc_id)) {
+            return false;
+        }
+        v.location = loc_id;
+        ++cnt;
+    }
+    if (auto it = j.find("user"); it != j.end()) {
+        uint32_t user_id = it.value().get<uint32_t>();
+        if (!db.user_exists(user_id)) {
+            return false;
+        }
+        v.user = user_id;
+        ++cnt;
+    }
+    if (auto it = j.find("mark"); it != j.end()) {
+        uint8_t mark = it.value().get<uint8_t>();
+        if (mark > 5) {
+            return false;
+        }
+        v.mark = mark;
+        ++cnt;
+    }
+    return cnt == fields_cnt;
+}
+
 
 } //anonymous namespace
 
@@ -236,16 +330,32 @@ void SimpleDB::create(const pod::Visit &vis) {
     loc2visits_[vis.location].insert(vis.id);
 }
 
-pod::User &SimpleDB::user(id_t id) {
-    return users_[id];
-}
-
-pod::Location &SimpleDB::location(id_t id) {
-    return locations_[id];
-}
-
-pod::Visit &SimpleDB::visit(id_t id) {
-    return visits_[id];
+bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len) {
+    auto j = json::parse(body, body + body_len);
+    switch (type) {
+        case pod::DATA_TYPE::User: {
+            auto &u = users_[id];
+            return ::update(u, j);
+        }
+        case pod::DATA_TYPE::Location: {
+            auto &loc = locations_[id];
+            return ::update(loc, j);
+        }
+        case pod::DATA_TYPE::Visit: {
+            auto &vis = visits_[id];
+            uint32_t old_loc = vis.location;
+            uint32_t old_user = vis.user;
+            if (!::update(vis, j, *this)) {
+                return false;
+            }
+            u2visits_[old_user].erase(vis.id);
+            u2visits_[vis.user].insert(vis.id);
+            loc2visits_[old_loc].erase(vis.id);
+            loc2visits_[vis.location].insert(vis.id);
+            return true;
+        }
+        default: return false;
+    }
 }
 
 void SimpleDB::prepare() {
