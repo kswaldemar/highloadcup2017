@@ -51,4 +51,10 @@ struct Visit {
 void to_json(nlohmann::json &j, const Visit &v);
 void from_json(const nlohmann::json &j, Visit &v);
 
+struct VisitsCmp {
+    bool operator()(const pod::Visit *lhs, const pod::Visit *rhs) const {
+        return lhs->visited_at < rhs->visited_at;
+    }
+};
+
 } // namespace pod

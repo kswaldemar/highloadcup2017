@@ -119,8 +119,8 @@ bool update(pod::Visit &v, const json &j, const SimpleDB &db) {
 }
 
 
-} //anonymous namespace
 
+} //anonymous namespace
 
 SimpleDB SimpleDB::from_folder(const std::string &folder) {
     SimpleDB ret;
@@ -233,12 +233,11 @@ std::string SimpleDB::location_average(id_t id,
     double mean = 0;
     size_t cnt = 0;
     bool ok;
-    for (auto v_id : loc2visits_[id]) {
-        const auto &v = visits_[v_id];
-        ok = (!from_date || v.visited_at > *from_date);
-        ok = ok && (!to_date   || v.visited_at < *to_date);
+    for (const auto &v : loc2visits_[id]) {
+        ok = (!from_date || v->visited_at > *from_date);
+        ok = ok && (!to_date   || v->visited_at < *to_date);
         if (from_age || to_age || gender) {
-            const auto &u = users_[v.user];
+            const auto &u = users_[v->user];
             ok = ok && (!gender || *gender == u.gender[0]);
             if (ok && (from_age || to_age)) {
                 time_t ts;
@@ -257,7 +256,7 @@ std::string SimpleDB::location_average(id_t id,
             }
         }
         if (ok) {
-            mean += v.mark;
+            mean += v->mark;
             ++cnt;
         }
     }
@@ -288,18 +287,16 @@ std::string SimpleDB::user_visits(id_t id,
 
     std::vector<desc_t> values;
     bool ok;
-    for (id_t v_id : u2visits_[id]) {
-        const auto &v = visits_[v_id];
-
-        ok = (!from_date || v.visited_at > *from_date);
-        ok = ok && (!to_date   || v.visited_at < *to_date);
+    for (const auto &v : u2visits_[id]) {
+        ok = (!from_date || v->visited_at > *from_date);
+        ok = ok && (!to_date   || v->visited_at < *to_date);
 
         if (ok) {
-            const auto &loc = locations_[v.location];
+            const auto &loc = locations_[v->location];
             if ((country && *country != loc.country) || (to_distance && *to_distance <= loc.distance)) {
                 continue;
             }
-            values.emplace_back(v.mark, v.visited_at, loc.place.c_str());
+            values.emplace_back(v->mark, v->visited_at, loc.place.c_str());
         }
     }
     if (values.empty()) {
@@ -326,8 +323,9 @@ void SimpleDB::create(const pod::Location &loc) {
 
 void SimpleDB::create(const pod::Visit &vis) {
     visits_[vis.id] = vis;
-    u2visits_[vis.user].insert(vis.id);
-    loc2visits_[vis.location].insert(vis.id);
+    const auto *ptr = &visits_[vis.id];
+    u2visits_[vis.user].insert(ptr);
+    loc2visits_[vis.location].insert(ptr);
 }
 
 bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len) {
@@ -356,10 +354,11 @@ bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len
             if (!::update(vis, j, *this)) {
                 return false;
             }
-            u2visits_[old_user].erase(vis.id);
-            u2visits_[vis.user].insert(vis.id);
-            loc2visits_[old_loc].erase(vis.id);
-            loc2visits_[vis.location].insert(vis.id);
+            const auto *visit_ptr = &visits_[id];
+            u2visits_[old_user].erase(visit_ptr);
+            u2visits_[vis.user].insert(visit_ptr);
+            loc2visits_[old_loc].erase(visit_ptr);
+            loc2visits_[vis.location].insert(visit_ptr);
             visits_[id] = vis;
             return true;
         }
@@ -368,8 +367,17 @@ bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len
 }
 
 void SimpleDB::prepare() {
+    const uint32_t max_post_requests = 15000;
+
+    users_.rehash(users_.size() + max_post_requests);
+    locations_.rehash(locations_.size() + max_post_requests);
+    visits_.rehash(visits_.size() + max_post_requests);
+
+    u2visits_.rehash(users_.size() + max_post_requests);
+    loc2visits_.rehash(locations_.size() + max_post_requests);
+
     for (const auto &[id, v] : visits_) {
-        u2visits_[v.user].insert(id);
-        loc2visits_[v.location].insert(id);
+        u2visits_[v.user].insert(&v);
+        loc2visits_[v.location].insert(&v);
     }
 }

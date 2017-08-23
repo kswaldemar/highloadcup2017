@@ -9,6 +9,8 @@
 #include <vector>
 #include <optional>
 #include <set>
+#include <unordered_map>
+#include <unordered_set>
 
 class SimpleDB {
 public:
@@ -44,17 +46,20 @@ public:
 private:
     void prepare();
 
-    using locations_t = std::map<id_t, pod::Location>;
-    using mapping_t = std::map<id_t, std::set<id_t>>;
+    template<typename T>
+    using table = std::unordered_map<id_t, T>;
+
+    using users_mapping_t = std::unordered_map<id_t, std::unordered_set<const pod::Visit*>>;
+    using locations_mapping_t = std::unordered_map<id_t, std::unordered_set<const pod::Visit*>>;
 
     SimpleDB() {};
 
-    std::map<id_t, pod::User> users_;
-    locations_t locations_;
-    std::map<id_t, pod::Visit> visits_;
+    table<pod::User> users_;
+    table<pod::Location> locations_;
+    table<pod::Visit> visits_;
 
-    mapping_t u2visits_;
-    mapping_t loc2visits_;
+    users_mapping_t u2visits_;
+    locations_mapping_t loc2visits_;
 
     std::tm start_timestamp_;
 };

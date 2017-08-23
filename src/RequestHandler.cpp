@@ -239,12 +239,6 @@ RequestHandler::ReqType RequestHandler::match_action(std::string method, char *u
     ReqType ret;
     ret.act = ActionType::NONE;
 
-    //Normalize uri
-    size_t uri_len = strlen(uri);
-    if (uri[uri_len - 1] == '/') {
-        uri[uri_len - 1] = '\0';
-    }
-
     const char *it = uri;
     const char *uri_end = uri + strlen(uri);
     if (it[0] == '/') {
