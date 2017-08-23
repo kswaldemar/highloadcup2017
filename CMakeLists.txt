@@ -11,6 +11,7 @@ include_directories(3rdparty/json/include)
 # Project
 add_compile_options(
     -std=c++1z -Wall -Wextra
+    -msse4.2 -march=native
     ${LIBCXX}
 )
 
