@@ -8,5 +8,5 @@ if [ ${TYPE} == "T" ]; then
 else
     TYPE="FULL"
 fi
-
-./tester -addr http://127.0.0.1:8080 -hlcupdocs ./hlcupdocs/data/${TYPE}/ -test -hide-failed -phase ${PHASE}
+#-hide-failed 
+./tester -addr http://127.0.0.1:8080 -hlcupdocs ./hlcupdocs/data/${TYPE}/ -test -phase ${PHASE}

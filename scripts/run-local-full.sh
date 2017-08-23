@@ -5,5 +5,5 @@ mkdir -p /tmp/hlcup-full-run
 pushd /tmp/hlcup-full-run
 ln -s ${root}/testing/hlcupdocs/data/FULL/data ./data
 #perf record -g 
-${root}/build-release/web-server
+${root}/build-debug/web-server
 popd
