@@ -1,6 +1,6 @@
 #include "SimpleLog.h"
 #include "SimpleDB.h"
-#include "WebServer.h"
+#include "RequestHandler.h"
 
 #include <arpa/inet.h>
 
@@ -12,7 +12,7 @@ constexpr uint16_t PORT = 80;
 
 const std::string JSON_FOLDER = "./data";
 
-static WebServer g_handler(JSON_FOLDER);
+static RequestHandler g_handler(JSON_FOLDER);
 
 int reply(my_request_t *req) {
     return g_handler.reply(req);

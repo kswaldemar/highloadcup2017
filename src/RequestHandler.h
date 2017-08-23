@@ -16,7 +16,7 @@ struct my_request_t {
 };
 
 
-class WebServer {
+class RequestHandler {
     static constexpr const char *st_404 = "404 Not found";
     static constexpr const char *st_200 = "200 Ok";
     static constexpr const char *st_400 = "400 You are wrong";
@@ -36,7 +36,7 @@ public:
         pod::DATA_TYPE ent_type;
     };
 
-    WebServer(const std::string root_dir);
+    RequestHandler(const std::string root_dir);
 
     int reply(my_request_t *req);
 

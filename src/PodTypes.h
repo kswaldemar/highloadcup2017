@@ -28,7 +28,6 @@ struct User {
 
 void to_json(nlohmann::json &j, const User &u);
 void from_json(const nlohmann::json &j, User &u);
-bool is_valid(const User &u);
 
 struct Location {
     uint32_t id;
@@ -40,7 +39,6 @@ struct Location {
 
 void to_json(nlohmann::json &j, const Location &loc);
 void from_json(const nlohmann::json &j, Location &loc);
-bool is_valid(const Location &u);
 
 struct Visit {
     uint32_t id;
@@ -52,6 +50,5 @@ struct Visit {
 
 void to_json(nlohmann::json &j, const Visit &v);
 void from_json(const nlohmann::json &j, Visit &v);
-bool is_valid(const Visit &u);
 
-}
+} // namespace pod

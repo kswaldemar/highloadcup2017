@@ -1,4 +1,4 @@
-#include "WebServer.h"
+#include "RequestHandler.h"
 #include "SimpleDB.h"
 
 #include "urldecode.h"
@@ -14,7 +14,6 @@ extern "C" {
 #include <optional>
 
 using nlohmann::json;
-
 
 namespace {
 
@@ -88,14 +87,15 @@ bool is_valid_gender(std::string_view gender) {
 
 } // anonymous namespace
 
-WebServer::WebServer(const std::string root_dir)
+RequestHandler::RequestHandler(const std::string root_dir)
     : db_(SimpleDB::from_folder(root_dir)) {
 }
 
 
-int WebServer::reply(my_request_t *req) {
+int RequestHandler::reply(my_request_t *req) {
     auto &native = req->native;
     LOG_INFO("Request %, Method %", native.uri, native.method);
+
     try {
         ReqType rt = match_action(native.method, native.uri);
         auto params = split_validate_params(rt.act, native.uri);
@@ -140,7 +140,7 @@ int WebServer::reply(my_request_t *req) {
     return WS_REPLY_FINISHED;
 }
 
-void WebServer::reply_entity_get(my_request_t *req, pod::DATA_TYPE type, uint32_t id) {
+void RequestHandler::reply_entity_get(my_request_t *req, pod::DATA_TYPE type, uint32_t id) {
     LOG_DEBUG("Ok, parsed: entity type = %, id = %", static_cast<uint16_t>(type), id);
     if (!db_.is_entity_exists(type, id)) {
         LOG_DEBUG("Does not exists")
@@ -152,7 +152,7 @@ void WebServer::reply_entity_get(my_request_t *req, pod::DATA_TYPE type, uint32_
     }
 }
 
-void WebServer::reply_entity_create(my_request_t *req, pod::DATA_TYPE type) {
+void RequestHandler::reply_entity_create(my_request_t *req, pod::DATA_TYPE type) {
     if (create_db_entity_from_json(type, req->native.body, req->native.bodylen)) {
         send_reply(req, st_200, "{}");
     } else {
@@ -160,7 +160,7 @@ void WebServer::reply_entity_create(my_request_t *req, pod::DATA_TYPE type) {
     }
 }
 
-void WebServer::reply_entity_update(my_request_t *req, pod::DATA_TYPE type, uint32_t id) {
+void RequestHandler::reply_entity_update(my_request_t *req, pod::DATA_TYPE type, uint32_t id) {
     LOG_DEBUG("Update entity id %", id);
     if (!db_.is_entity_exists(type, id)) {
         send_reply(req, st_404);
@@ -174,7 +174,7 @@ void WebServer::reply_entity_update(my_request_t *req, pod::DATA_TYPE type, uint
     }
 }
 
-void WebServer::reply_average(my_request_t *req, uint32_t id, const uri_params_t &params) {
+void RequestHandler::reply_average(my_request_t *req, uint32_t id, const uri_params_t &params) {
     LOG_DEBUG("Calculate average for location_id %", id);
     if (!db_.is_entity_exists(pod::DATA_TYPE::Location, id)) {
         send_reply(req, st_404);
@@ -204,7 +204,7 @@ void WebServer::reply_average(my_request_t *req, uint32_t id, const uri_params_t
     }
 }
 
-void WebServer::reply_visits(my_request_t *req, uint32_t id, const uri_params_t &params) {
+void RequestHandler::reply_visits(my_request_t *req, uint32_t id, const uri_params_t &params) {
     LOG_DEBUG("Calculate visits for user_id %", id);
     if (!db_.is_entity_exists(pod::DATA_TYPE::User, id)) {
         send_reply(req, st_404);
@@ -222,8 +222,8 @@ void WebServer::reply_visits(my_request_t *req, uint32_t id, const uri_params_t 
     }
 }
 
-std::optional<std::string_view> WebServer::get_param_val(const WebServer::uri_params_t &params,
-                                                         std::string_view key) const {
+std::optional<std::string_view> RequestHandler::get_param_val(const RequestHandler::uri_params_t &params,
+                                                              std::string_view key) const {
 
     if (auto it = find_if(params.begin(), params.end(), [&key](const kv_param_t &kv) { return kv.first == key; });
         it != params.end()) {
@@ -235,7 +235,7 @@ std::optional<std::string_view> WebServer::get_param_val(const WebServer::uri_pa
 
 
 ///////////////////////////////////////////////////////////////////////////////
-WebServer::ReqType WebServer::match_action(std::string method, char *uri) {
+RequestHandler::ReqType RequestHandler::match_action(std::string method, char *uri) {
     ReqType ret;
     ret.act = ActionType::NONE;
 
@@ -306,7 +306,7 @@ WebServer::ReqType WebServer::match_action(std::string method, char *uri) {
     return ret;
 }
 
-WebServer::uri_params_t WebServer::split_validate_params(ActionType type, char *uri) {
+RequestHandler::uri_params_t RequestHandler::split_validate_params(ActionType type, char *uri) {
     size_t uri_len = strlen(uri);
     const auto uri_end = uri + uri_len;
     auto start_it = std::find(uri, uri_end, '?');
@@ -350,7 +350,7 @@ WebServer::uri_params_t WebServer::split_validate_params(ActionType type, char *
     return ret;
 }
 
-bool WebServer::create_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen) {
+bool RequestHandler::create_db_entity_from_json(pod::DATA_TYPE type, char *body, int bodylen) {
     auto j = json::parse(body, body + bodylen);
     uint32_t id = j["id"].get<uint32_t>();
     if (db_.is_entity_exists(type, id)) {
@@ -378,7 +378,7 @@ bool WebServer::create_db_entity_from_json(pod::DATA_TYPE type, char *body, int 
     return true;
 }
 
-bool WebServer::update_db_entity_from_json(pod::DATA_TYPE type, uint32_t id, char *body, int bodylen) {
+bool RequestHandler::update_db_entity_from_json(pod::DATA_TYPE type, uint32_t id, char *body, int bodylen) {
     if (!db_.is_entity_exists(type, id)) {
         return false;
     }
@@ -389,7 +389,7 @@ bool WebServer::update_db_entity_from_json(pod::DATA_TYPE type, uint32_t id, cha
     return true;
 }
 
-bool WebServer::check_param_correct(ActionType type, std::string_view key, std::string_view value) {
+bool RequestHandler::check_param_correct(ActionType type, std::string_view key, std::string_view value) {
     LOG_DEBUG("Validate params pair '%=%'", key, value);
 
     if (type == ActionType::ENT_GET) {

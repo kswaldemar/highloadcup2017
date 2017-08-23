@@ -31,10 +31,6 @@ void from_json(const nlohmann::json &j, User &u) {
     u.birth_date = j.at("birth_date").get<time_t>();
 }
 
-bool is_valid(const User &u) {
-    return u.gender == "m" || u.gender == "f";
-}
-
 //Location
 void to_json(nlohmann::json &j, const Location &loc) {
     j = nlohmann::json{{"id",       loc.id},
@@ -52,10 +48,6 @@ void from_json(const nlohmann::json &j, Location &loc) {
     loc.distance = j.at("distance").get<uint32_t>();
 }
 
-bool is_valid(const Location &l) {
-    return true;
-}
-
 //Visit
 void to_json(nlohmann::json &j, const Visit &v) {
     j = nlohmann::json{{"id",         v.id},
@@ -71,10 +63,6 @@ void from_json(const nlohmann::json &j, Visit &v) {
     v.user = j.at("user").get<uint32_t>();
     v.visited_at = j.at("visited_at").get<uint64_t>();
     v.mark = j.at("mark").get<uint8_t>();
-}
-
-bool is_valid(const Visit &v) {
-    return v.mark <= 5;
 }
 
 

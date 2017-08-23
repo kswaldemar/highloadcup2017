@@ -9,4 +9,4 @@ else
     TYPE="FULL"
 fi
 
-./tester -addr http://127.0.0.1:8080 -hlcupdocs ./hlcupdocs/data/${TYPE}/ -test -phase ${PHASE}
+./tester -addr http://127.0.0.1:8080 -hlcupdocs ./hlcupdocs/data/${TYPE}/ -test -hide-failed -phase ${PHASE}
