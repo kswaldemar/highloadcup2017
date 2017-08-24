@@ -283,13 +283,19 @@ void SimpleDB::location_average(char *out, id_t id,
 void SimpleDB::user_visits(char *out, id_t id,
                            std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
                            std::optional<std::string_view> country, std::optional<uint32_t> to_distance) {
-    static const char *format = "{\"mark\":%u,\"visited_at\":%llu,\"place\":%s}";
-    static const char start[] = "{\"visits\": [";
-    static const char end[] = "]}";
+    struct desc_t {
+        desc_t(uint8_t mark, size_t visited_at, const char *place_ptr)
+            : mark(mark),
+              visited_at(visited_at),
+              place_ptr(place_ptr) {
+        }
 
-    char *out_it = out;
-    memcpy(out_it, start, sizeof(start));
-    out_it += sizeof(start);
+        uint8_t mark;
+        size_t visited_at;
+        const char *place_ptr;
+    };
+
+    std::vector<desc_t> values;
     bool ok;
     for (const auto &v : u2visits_[id]) {
         ok = (!from_date || v->visited_at > *from_date);
@@ -300,13 +306,29 @@ void SimpleDB::user_visits(char *out, id_t id,
             if ((country && *country != loc.country) || (to_distance && *to_distance <= loc.distance)) {
                 continue;
             }
-
-            if (out_it > out + sizeof(start)) {
-                *out_it++ = ',';
-            }
-            int writed_cnt = sprintf(out_it, format, v->mark, v->visited_at, loc.place.c_str());
-            out_it += writed_cnt;
+            values.emplace_back(v->mark, v->visited_at, loc.place.c_str());
         }
+    }
+
+    std::sort(values.begin(), values.end(), [](const desc_t &lhs, const desc_t &rhs) {
+        return lhs.visited_at < rhs.visited_at;
+    });
+
+
+    static const char *format = "{\"mark\":%u,\"visited_at\":%llu,\"place\":\"%s\"}";
+    static const char start[] = "{\"visits\": [";
+    static const char end[] = "]}";
+
+    char *out_it = out;
+    memcpy(out_it, start, sizeof(start));
+    out_it += sizeof(start) - 1;
+    const char * const initial_it = out_it;
+    for (const auto &d : values) {
+        if (out_it > initial_it) {
+            *out_it++ = ',';
+        }
+        int writed_cnt = sprintf(out_it, format, d.mark, d.visited_at, d.place_ptr);
+        out_it += writed_cnt;
     }
     memcpy(out_it, end, sizeof(end));
 }
@@ -322,8 +344,8 @@ void SimpleDB::create(const pod::Location &loc) {
 void SimpleDB::create(const pod::Visit &vis) {
     visits_[vis.id] = vis;
     const auto *ptr = &visits_[vis.id];
-    u2visits_[vis.user].insert(ptr);
-    loc2visits_[vis.location].insert(ptr);
+    u2visits_[ptr->user].insert(ptr);
+    loc2visits_[ptr->location].insert(ptr);
 }
 
 bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len) {
@@ -353,11 +375,11 @@ bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len
                 return false;
             }
             visits_[id] = vis;
-            const auto *visit_ptr = &visits_[id];
-            u2visits_[old_user].erase(visit_ptr);
-            u2visits_[vis.user].insert(visit_ptr);
-            loc2visits_[old_loc].erase(visit_ptr);
-            loc2visits_[vis.location].insert(visit_ptr);
+            const auto *ptr = &visits_[id];
+            u2visits_[old_user].erase(ptr);
+            loc2visits_[old_loc].erase(ptr);
+            u2visits_[ptr->user].insert(ptr);
+            loc2visits_[ptr->location].insert(ptr);
             return true;
         }
         default: return false;

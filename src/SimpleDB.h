@@ -49,7 +49,7 @@ private:
     template<typename T>
     using table = std::unordered_map<id_t, T>;
 
-    using users_mapping_t = std::unordered_map<id_t, std::set<const pod::Visit*, pod::VisitsCmp>>;
+    using users_mapping_t = std::unordered_map<id_t, std::unordered_set<const pod::Visit*>>;
     using locations_mapping_t = std::unordered_map<id_t, std::unordered_set<const pod::Visit*>>;
 
     SimpleDB() {};
