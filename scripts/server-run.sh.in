@@ -10,4 +10,4 @@ if [ -r ${SERVER_PATH}/data.zip ]; then
 fi
 
 echo "Run server"
-./web-server
+./@PROJECT_NAME@

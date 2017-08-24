@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
 VOLUME /tmp
 
 ADD build-release/web-server .
-ADD server-run.sh .
+ADD build-release/server-run.sh .
 
 ADD 3rdparty/website/lib /lib
 ADD docker-libs /lib

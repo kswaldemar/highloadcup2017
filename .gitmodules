@@ -1,3 +1,6 @@
 [submodule "testing/hlcupdocs"]
 	path = testing/hlcupdocs
 	url = https://github.com/sat2707/hlcupdocs.git
+[submodule "3rdparty/libwebsite"]
+	path = 3rdparty/libwebsite
+	url = https://github.com/kswaldemar/libwebsite.git

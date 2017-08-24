@@ -43,19 +43,6 @@ bool is_uint(std::string_view str) {
     return true;
 }
 
-bool is_int(std::string_view str) {
-    if (str.empty() || (str[0] != '-' && !isdigit(str[0]))) {
-        return false;
-    }
-    str.remove_prefix(1);
-    for (const char c : str) {
-        if (!isdigit(c)) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool is_double(std::string_view str) {
     if (str.empty() || str[0] == '.' || (str[0] != '-' && !isdigit(str[0]))) {
         return false;
@@ -91,7 +78,6 @@ bool is_valid_gender(std::string_view gender) {
 RequestHandler::RequestHandler(const std::string root_dir)
     : db_(SimpleDB::from_folder(root_dir)) {
 }
-
 
 int RequestHandler::reply(my_request_t *req) {
     auto &native = req->native;
@@ -233,7 +219,6 @@ std::optional<std::string_view> RequestHandler::get_param_val(const RequestHandl
     }
     return {};
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 RequestHandler::ReqType RequestHandler::match_action(std::string method, char *uri) {
