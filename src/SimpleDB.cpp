@@ -189,16 +189,19 @@ bool SimpleDB::is_entity_exists(pod::DATA_TYPE type, id_t id) const {
     }
 }
 
-std::string SimpleDB::get_entity(pod::DATA_TYPE type, id_t id) const {
+void SimpleDB::get_entity(pod::DATA_TYPE type, id_t id, char *out) const {
     switch (type) {
         case pod::DATA_TYPE::User:
-            return user_json(id);
+            user_json(id, out);
+            break;
         case pod::DATA_TYPE::Location:
-            return location_json(id);
+            location_json(id, out);
+            break;
         case pod::DATA_TYPE::Visit:
-            return visit_json(id);
+            visit_json(id, out);
+            break;
         case pod::DATA_TYPE::None:
-            return "";
+            break;
     }
 }
 
@@ -214,16 +217,26 @@ bool SimpleDB::visit_exists(id_t id) const {
     return visits_.find(id) != visits_.end();
 }
 
-std::string SimpleDB::user_json(id_t id) const {
-    return nlohmann::json(users_.at(id)).dump();
+void SimpleDB::user_json(id_t id, char *out) const {
+    static const char *format =
+        "{\"id\":%u,\"email\":%s,\"first_name\":%s,\"last_name\":%s,\"gender\":%s,\"birth_date\":%d}";
+    const auto &u = users_.at(id);
+    sprintf(out, format,
+            u.id, u.email.c_str(), u.first_name.c_str(), u.last_name.c_str(), u.gender.c_str(), u.birth_date);
 }
 
-std::string SimpleDB::visit_json(id_t id) const {
-    return nlohmann::json(visits_.at(id)).dump();
+void SimpleDB::visit_json(id_t id, char *out) const {
+    static const char *format =
+        "{\"id\":%u,\"location\":%u,\"user\":%u,\"visited_at\":%llu,\"mark\":%d}";
+    const auto &v = visits_.at(id);
+    sprintf(out, format, v.id, v.location, v.user, v.visited_at, v.mark);
 }
 
-std::string SimpleDB::location_json(id_t id) const {
-    return nlohmann::json(locations_.at(id)).dump();
+void SimpleDB::location_json(id_t id, char *out) const {
+    static const char *format =
+        "{\"id\":%u,\"place\":%s,\"country\":%s,\"city\":%s,\"distance\":%u}";
+    const auto &l = locations_.at(id);
+    sprintf(out, format, l.id, l.place.c_str(), l.country.c_str(), l.city.c_str(), l.distance);
 }
 
 std::string SimpleDB::location_average(id_t id,

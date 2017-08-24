@@ -19,16 +19,16 @@ public:
     static SimpleDB from_folder(const std::string &folder);
 
     bool is_entity_exists(pod::DATA_TYPE type, id_t id) const;
-    std::string get_entity(pod::DATA_TYPE type, id_t id) const;
+    void get_entity(pod::DATA_TYPE type, id_t id, char *out) const;
 
     //Get interface
     bool user_exists(id_t id) const;
     bool location_exists(id_t id) const;
     bool visit_exists(id_t id) const;
 
-    std::string user_json(id_t id) const;
-    std::string visit_json(id_t id) const;
-    std::string location_json(id_t id) const;
+    void user_json(id_t id, char *out) const;
+    void visit_json(id_t id, char *out) const;
+    void location_json(id_t id, char *out) const;
 
     std::string location_average(id_t id, std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
                                  std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,

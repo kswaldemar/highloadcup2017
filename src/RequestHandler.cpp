@@ -22,8 +22,9 @@ void send_reply(my_request_t *req, const char *status_line, const char *data) {
     ws_add_header(&req->native, "Content-Type", "application/json; charset=utf-8");
     ws_add_header(&req->native, "Server", "hlcup-1.0");
     size_t data_len = strlen(data);
-    memcpy(req->buf, data, data_len);
-    req->buf[data_len] = '\0';
+    if (data != req->buf) {
+        memcpy(req->buf, data, data_len);
+    }
     ws_reply_data(&req->native, req->buf, data_len);
 }
 
@@ -146,9 +147,9 @@ void RequestHandler::reply_entity_get(my_request_t *req, pod::DATA_TYPE type, ui
         LOG_DEBUG("Does not exists")
         send_reply(req, st_404);
     } else {
-        std::string msg = db_.get_entity(type, id);
-        LOG_DEBUG("Got json % with size %", msg, msg.size())
-        send_reply(req, st_200, msg.c_str());
+        db_.get_entity(type, id, req->buf);
+        LOG_DEBUG("Got json % with size %", static_cast<const char *>(req->buf), strlen(req->buf))
+        send_reply(req, st_200, req->buf);
     }
 }
 
