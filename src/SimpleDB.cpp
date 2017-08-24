@@ -303,9 +303,6 @@ std::string SimpleDB::user_visits(id_t id,
         return "{\"visits\": []}";
     }
 
-    std::sort(values.begin(), values.end(), [](const desc_t &lhs, const desc_t &rhs) {
-        return lhs.visited_at < rhs.visited_at;
-    });
     json ar;
     for (const auto &d : values) {
         ar.push_back({{"mark", d.mark}, {"visited_at", d.visited_at}, {"place", d.place_ptr}});
@@ -354,12 +351,12 @@ bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len
             if (!::update(vis, j, *this)) {
                 return false;
             }
+            visits_[id] = vis;
             const auto *visit_ptr = &visits_[id];
             u2visits_[old_user].erase(visit_ptr);
             u2visits_[vis.user].insert(visit_ptr);
             loc2visits_[old_loc].erase(visit_ptr);
             loc2visits_[vis.location].insert(visit_ptr);
-            visits_[id] = vis;
             return true;
         }
         default: return false;
