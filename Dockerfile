@@ -16,8 +16,8 @@ VOLUME /tmp
 
 ADD build-release/web-server .
 ADD build-release/server-run.sh .
+ADD build-release/3rdparty/libwebsite/libwebsite.so /lib
 
-ADD 3rdparty/website/lib /lib
 ADD docker-libs /lib
 
 EXPOSE 80
