@@ -33,8 +33,8 @@ public:
     void location_average(char *out, id_t id, std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
                                  std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,
                                  std::optional<char> gender);
-    std::string user_visits(id_t id, std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
-                            std::optional<std::string_view> country, std::optional<uint32_t> to_distance);
+    void user_visits(char *out, id_t id, std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
+                     std::optional<std::string_view> country, std::optional<uint32_t> to_distance);
 
     //Post interface
     void create(const pod::User &usr);

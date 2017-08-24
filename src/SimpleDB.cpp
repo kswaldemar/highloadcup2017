@@ -280,22 +280,16 @@ void SimpleDB::location_average(char *out, id_t id,
     sprintf(out, "{\"avg\": %g}", mean);
 }
 
-std::string SimpleDB::user_visits(id_t id,
-                                  std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
-                                  std::optional<std::string_view> country, std::optional<uint32_t> to_distance) {
-    struct desc_t {
-        desc_t(uint8_t mark, size_t visited_at, const char *place_ptr)
-            : mark(mark),
-              visited_at(visited_at),
-              place_ptr(place_ptr) {
-        }
+void SimpleDB::user_visits(char *out, id_t id,
+                           std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
+                           std::optional<std::string_view> country, std::optional<uint32_t> to_distance) {
+    static const char *format = "{\"mark\":%u,\"visited_at\":%llu,\"place\":%s}";
+    static const char start[] = "{\"visits\": [";
+    static const char end[] = "]}";
 
-        uint8_t mark;
-        size_t visited_at;
-        const char *place_ptr;
-    };
-
-    std::vector<desc_t> values;
+    char *out_it = out;
+    memcpy(out_it, start, sizeof(start));
+    out_it += sizeof(start);
     bool ok;
     for (const auto &v : u2visits_[id]) {
         ok = (!from_date || v->visited_at > *from_date);
@@ -306,18 +300,15 @@ std::string SimpleDB::user_visits(id_t id,
             if ((country && *country != loc.country) || (to_distance && *to_distance <= loc.distance)) {
                 continue;
             }
-            values.emplace_back(v->mark, v->visited_at, loc.place.c_str());
+
+            if (out_it > out + sizeof(start)) {
+                *out_it++ = ',';
+            }
+            int writed_cnt = sprintf(out_it, format, v->mark, v->visited_at, loc.place.c_str());
+            out_it += writed_cnt;
         }
     }
-    if (values.empty()) {
-        return "{\"visits\": []}";
-    }
-
-    json ar;
-    for (const auto &d : values) {
-        ar.push_back({{"mark", d.mark}, {"visited_at", d.visited_at}, {"place", d.place_ptr}});
-    }
-    return "{\"visits\": " + ar.dump() + "}";
+    memcpy(out_it, end, sizeof(end));
 }
 
 void SimpleDB::create(const pod::User &usr) {

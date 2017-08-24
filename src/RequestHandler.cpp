@@ -218,8 +218,8 @@ void RequestHandler::reply_visits(my_request_t *req, uint32_t id, const uri_para
         LOG_DEBUG("User visits filter: [fromDate=%, toDate=%, country=%, toDistance=%]",
                   from_date.value_or(0), to_date.value_or(0), country.value_or("None"), to_distance.value_or(0));
 
-        std::string msg = db_.user_visits(id, from_date, to_date, country, to_distance);
-        send_reply(req, st_200, msg.c_str());
+        db_.user_visits(req->buf, id, from_date, to_date, country, to_distance);
+        send_reply(req, st_200, req->buf);
     }
 }
 
