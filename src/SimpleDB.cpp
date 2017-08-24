@@ -189,16 +189,19 @@ bool SimpleDB::is_entity_exists(pod::DATA_TYPE type, id_t id) const {
     }
 }
 
-std::string SimpleDB::get_entity(pod::DATA_TYPE type, id_t id) const {
+void SimpleDB::get_entity(pod::DATA_TYPE type, id_t id, char *out) const {
     switch (type) {
         case pod::DATA_TYPE::User:
-            return user_json(id);
+            user_json(id, out);
+            break;
         case pod::DATA_TYPE::Location:
-            return location_json(id);
+            location_json(id, out);
+            break;
         case pod::DATA_TYPE::Visit:
-            return visit_json(id);
+            visit_json(id, out);
+            break;
         case pod::DATA_TYPE::None:
-            return "";
+            break;
     }
 }
 
@@ -214,22 +217,32 @@ bool SimpleDB::visit_exists(id_t id) const {
     return visits_.find(id) != visits_.end();
 }
 
-std::string SimpleDB::user_json(id_t id) const {
-    return nlohmann::json(users_.at(id)).dump();
+void SimpleDB::user_json(id_t id, char *out) const {
+    static const char *format =
+        "{\"id\":%u,\"email\":\"%s\",\"first_name\":\"%s\",\"last_name\":\"%s\",\"gender\":\"%s\",\"birth_date\":%d}";
+    const auto &u = users_.at(id);
+    sprintf(out, format,
+            u.id, u.email.c_str(), u.first_name.c_str(), u.last_name.c_str(), u.gender.c_str(), u.birth_date);
 }
 
-std::string SimpleDB::visit_json(id_t id) const {
-    return nlohmann::json(visits_.at(id)).dump();
+void SimpleDB::visit_json(id_t id, char *out) const {
+    static const char *format =
+        "{\"id\":%u,\"location\":%u,\"user\":%u,\"visited_at\":%llu,\"mark\":%d}";
+    const auto &v = visits_.at(id);
+    sprintf(out, format, v.id, v.location, v.user, v.visited_at, v.mark);
 }
 
-std::string SimpleDB::location_json(id_t id) const {
-    return nlohmann::json(locations_.at(id)).dump();
+void SimpleDB::location_json(id_t id, char *out) const {
+    static const char *format =
+        "{\"id\":%u,\"place\":\"%s\",\"country\":\"%s\",\"city\":\"%s\",\"distance\":%u}";
+    const auto &l = locations_.at(id);
+    sprintf(out, format, l.id, l.place.c_str(), l.country.c_str(), l.city.c_str(), l.distance);
 }
 
-std::string SimpleDB::location_average(id_t id,
-                                       std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
-                                       std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,
-                                       std::optional<char> gender) {
+void SimpleDB::location_average(char *out, id_t id,
+                                std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
+                                std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,
+                                std::optional<char> gender) {
     double mean = 0;
     size_t cnt = 0;
     bool ok;
@@ -264,15 +277,12 @@ std::string SimpleDB::location_average(id_t id,
     mean /= cnt;
     static const uint32_t mul = 100000;
     mean = std::round(mean * mul) / mul;
-    char buf[30] = {};
-    sprintf(buf, "{\"avg\": %g}", mean);
-
-    return buf;
+    sprintf(out, "{\"avg\": %g}", mean);
 }
 
-std::string SimpleDB::user_visits(id_t id,
-                                  std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
-                                  std::optional<std::string_view> country, std::optional<uint32_t> to_distance) {
+void SimpleDB::user_visits(char *out, id_t id,
+                           std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
+                           std::optional<std::string_view> country, std::optional<uint32_t> to_distance) {
     struct desc_t {
         desc_t(uint8_t mark, size_t visited_at, const char *place_ptr)
             : mark(mark),
@@ -299,15 +309,28 @@ std::string SimpleDB::user_visits(id_t id,
             values.emplace_back(v->mark, v->visited_at, loc.place.c_str());
         }
     }
-    if (values.empty()) {
-        return "{\"visits\": []}";
-    }
 
-    json ar;
+    std::sort(values.begin(), values.end(), [](const desc_t &lhs, const desc_t &rhs) {
+        return lhs.visited_at < rhs.visited_at;
+    });
+
+
+    static const char *format = "{\"mark\":%u,\"visited_at\":%llu,\"place\":\"%s\"}";
+    static const char start[] = "{\"visits\": [";
+    static const char end[] = "]}";
+
+    char *out_it = out;
+    memcpy(out_it, start, sizeof(start));
+    out_it += sizeof(start) - 1;
+    const char * const initial_it = out_it;
     for (const auto &d : values) {
-        ar.push_back({{"mark", d.mark}, {"visited_at", d.visited_at}, {"place", d.place_ptr}});
+        if (out_it > initial_it) {
+            *out_it++ = ',';
+        }
+        int writed_cnt = sprintf(out_it, format, d.mark, d.visited_at, d.place_ptr);
+        out_it += writed_cnt;
     }
-    return "{\"visits\": " + ar.dump() + "}";
+    memcpy(out_it, end, sizeof(end));
 }
 
 void SimpleDB::create(const pod::User &usr) {
@@ -321,8 +344,8 @@ void SimpleDB::create(const pod::Location &loc) {
 void SimpleDB::create(const pod::Visit &vis) {
     visits_[vis.id] = vis;
     const auto *ptr = &visits_[vis.id];
-    u2visits_[vis.user].insert(ptr);
-    loc2visits_[vis.location].insert(ptr);
+    u2visits_[ptr->user].insert(ptr);
+    loc2visits_[ptr->location].insert(ptr);
 }
 
 bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len) {
@@ -352,11 +375,11 @@ bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len
                 return false;
             }
             visits_[id] = vis;
-            const auto *visit_ptr = &visits_[id];
-            u2visits_[old_user].erase(visit_ptr);
-            u2visits_[vis.user].insert(visit_ptr);
-            loc2visits_[old_loc].erase(visit_ptr);
-            loc2visits_[vis.location].insert(visit_ptr);
+            const auto *ptr = &visits_[id];
+            u2visits_[old_user].erase(ptr);
+            loc2visits_[old_loc].erase(ptr);
+            u2visits_[ptr->user].insert(ptr);
+            loc2visits_[ptr->location].insert(ptr);
             return true;
         }
         default: return false;
