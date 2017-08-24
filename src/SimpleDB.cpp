@@ -219,7 +219,7 @@ bool SimpleDB::visit_exists(id_t id) const {
 
 void SimpleDB::user_json(id_t id, char *out) const {
     static const char *format =
-        "{\"id\":%u,\"email\":%s,\"first_name\":%s,\"last_name\":%s,\"gender\":%s,\"birth_date\":%d}";
+        "{\"id\":%u,\"email\":\"%s\",\"first_name\":\"%s\",\"last_name\":\"%s\",\"gender\":\"%s\",\"birth_date\":%d}";
     const auto &u = users_.at(id);
     sprintf(out, format,
             u.id, u.email.c_str(), u.first_name.c_str(), u.last_name.c_str(), u.gender.c_str(), u.birth_date);
@@ -234,7 +234,7 @@ void SimpleDB::visit_json(id_t id, char *out) const {
 
 void SimpleDB::location_json(id_t id, char *out) const {
     static const char *format =
-        "{\"id\":%u,\"place\":%s,\"country\":%s,\"city\":%s,\"distance\":%u}";
+        "{\"id\":%u,\"place\":\"%s\",\"country\":\"%s\",\"city\":\"%s\",\"distance\":%u}";
     const auto &l = locations_.at(id);
     sprintf(out, format, l.id, l.place.c_str(), l.country.c_str(), l.city.c_str(), l.distance);
 }
