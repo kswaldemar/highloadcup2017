@@ -30,7 +30,7 @@ public:
     void visit_json(id_t id, char *out) const;
     void location_json(id_t id, char *out) const;
 
-    std::string location_average(id_t id, std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
+    void location_average(char *out, id_t id, std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
                                  std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,
                                  std::optional<char> gender);
     std::string user_visits(id_t id, std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,

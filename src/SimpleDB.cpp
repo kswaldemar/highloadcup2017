@@ -239,10 +239,10 @@ void SimpleDB::location_json(id_t id, char *out) const {
     sprintf(out, format, l.id, l.place.c_str(), l.country.c_str(), l.city.c_str(), l.distance);
 }
 
-std::string SimpleDB::location_average(id_t id,
-                                       std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
-                                       std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,
-                                       std::optional<char> gender) {
+void SimpleDB::location_average(char *out, id_t id,
+                                std::optional<uint32_t> from_date, std::optional<uint32_t> to_date,
+                                std::optional<uint32_t> from_age, std::optional<uint32_t> to_age,
+                                std::optional<char> gender) {
     double mean = 0;
     size_t cnt = 0;
     bool ok;
@@ -277,10 +277,7 @@ std::string SimpleDB::location_average(id_t id,
     mean /= cnt;
     static const uint32_t mul = 100000;
     mean = std::round(mean * mul) / mul;
-    char buf[30] = {};
-    sprintf(buf, "{\"avg\": %g}", mean);
-
-    return buf;
+    sprintf(out, "{\"avg\": %g}", mean);
 }
 
 std::string SimpleDB::user_visits(id_t id,

@@ -200,8 +200,8 @@ void RequestHandler::reply_average(my_request_t *req, uint32_t id, const uri_par
                   from_age.value_or(0), to_age.value_or(0),
                   gender.value_or('.'));
 
-        std::string msg = db_.location_average(id, from_date, to_date, from_age, to_age, gender);
-        send_reply(req, st_200, msg.c_str());
+        db_.location_average(req->buf, id, from_date, to_date, from_age, to_age, gender);
+        send_reply(req, st_200, req->buf);
     }
 }
 
