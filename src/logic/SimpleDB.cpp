@@ -387,7 +387,7 @@ bool SimpleDB::update(pod::DATA_TYPE type, uint32_t id, char *body, int body_len
 }
 
 void SimpleDB::prepare() {
-    const uint32_t max_post_requests = 15000;
+    const uint32_t max_post_requests = 42000;
 
     users_.rehash(users_.size() + max_post_requests);
     locations_.rehash(locations_.size() + max_post_requests);

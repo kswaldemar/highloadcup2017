@@ -12,13 +12,15 @@ RUN apt-get update \
 RUN apt-get update && apt-get install -y \
     unzip libssl-dev libev-dev
 
+RUN rm -rf /var/lib/apt/lists/*
+
 VOLUME /tmp
 
-ADD build-release/web-server .
-ADD build-release/server-run.sh .
-ADD build-release/3rdparty/libwebsite/libwebsite.so /lib
-
 ADD docker-libs /lib
+
+ADD build-release/3rdparty/libwebsite/libwebsite.so /lib
+ADD build-release/server-run.sh .
+ADD build-release/web-server .
 
 EXPOSE 80
 
