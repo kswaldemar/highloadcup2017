@@ -10,9 +10,9 @@ RUN apt-get update \
     libboost-thread1.55-dev
 
 RUN apt-get update && apt-get install -y \
-    unzip libssl-dev libev-dev
-
-RUN rm -rf /var/lib/apt/lists/*
+    unzip libssl-dev libev-dev \
+    libjemalloc-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 VOLUME /tmp
 

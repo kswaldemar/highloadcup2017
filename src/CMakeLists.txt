@@ -10,18 +10,21 @@ add_compile_options(
 )
 
 # Executable
-add_subdirectory(webengine)
-
 set(Sources
-    logic/main.cpp
-    logic/SimpleDB.cpp
-    logic/PodTypes.cpp
-    logic/RequestHandler.cpp)
+    main.cpp
+    SimpleDB.cpp
+    PodTypes.cpp
+    RequestHandler.cpp)
 
-add_executable(${PROJECT_NAME} ${Sources})
+set(Headers
+    SimpleLog.h
+    urldecode.h)
+
+add_executable(${PROJECT_NAME} ${Sources} ${Headers})
 target_link_libraries(${PROJECT_NAME}
     c++experimental
-    libwebsite)
+    libwebsite
+    jemalloc)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     LINK_FLAGS ${LIBCXX}

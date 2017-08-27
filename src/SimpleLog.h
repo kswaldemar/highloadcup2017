@@ -122,4 +122,4 @@ void logline(const char *type, const char *format, Args... args) {
 #define LOG_DEBUG(format, ...)
 #endif
 
-#define LOG_URGENT(format, ...) LOG("WEBSERVER", format, ##__VA_ARGS__);
+#define LOG_URGENT(format, ...) LOG("\033[1;32m" "URGENT" "\033[0m", format, ##__VA_ARGS__);
